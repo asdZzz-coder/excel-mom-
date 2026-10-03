@@ -41,22 +41,83 @@ namespace ServiceRecord
             Title = _updater.IsInstalled ? $"{AppTitle} v{_updater.CurrentVersion}" : $"{AppTitle} (開發版)";
             StatusText.Text = $"版本 {_updater.CurrentVersion}　·　填寫內容會自動儲存";
             ShowMonth(DateTime.Today.Year, DateTime.Today.Month);
+
+            ThemeService.TrackTitleBar(this); // 標題列跟著深淺色變
+            ThemeService.ThemeChanged += UpdateThemeButton;
+            ZoomService.ScaleChanged += UpdateZoomButtons;
+            Closed += (_, _) =>
+            {
+                ThemeService.ThemeChanged -= UpdateThemeButton;
+                ZoomService.ScaleChanged -= UpdateZoomButtons;
+            };
+            UpdateThemeButton();
+            UpdateZoomButtons();
         }
 
-        // ---------- Windows 11：標題列底色與視窗背景同色，看起來是一整片 ----------
+        // ---------- 主題：跟隨系統 / 淺色 / 深色 ----------
 
-        [DllImport("dwmapi.dll")]
-        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
-
-        private const int DWMWA_CAPTION_COLOR = 35;
-
-        protected override void OnSourceInitialized(EventArgs e)
+        private void Theme_Click(object sender, RoutedEventArgs e)
         {
-            base.OnSourceInitialized(e);
-            var bg = ((SolidColorBrush)FindResource("AppBgBrush")).Color;
-            int colorRef = bg.R | (bg.G << 8) | (bg.B << 16); // COLORREF = 0x00BBGGRR
-            // Windows 10 不支援此屬性，呼叫會回傳錯誤碼，直接忽略即可
-            DwmSetWindowAttribute(new WindowInteropHelper(this).Handle, DWMWA_CAPTION_COLOR, ref colorRef, sizeof(int));
+            ThemeService.Cycle();
+            StatusText.Text = $"外觀：{ThemeService.DisplayName(ThemeService.Mode)}";
+        }
+
+        private void UpdateThemeButton()
+        {
+            ThemeIcon.Text = ThemeService.Mode switch
+            {
+                AppTheme.Light => "", // 太陽
+                AppTheme.Dark => "",  // 月亮
+                _ => "",              // 電腦（跟隨系統）
+            };
+            ThemeText.Text = ThemeService.DisplayName(ThemeService.Mode);
+            ThemeButton.ToolTip = $"外觀：{ThemeService.DisplayName(ThemeService.Mode)}（按一下切換：跟隨系統 → 淺色 → 深色）";
+        }
+
+        // ---------- 字體放大縮小 ----------
+
+        private void ZoomIn_Click(object sender, RoutedEventArgs e) => ZoomService.ZoomIn();
+        private void ZoomOut_Click(object sender, RoutedEventArgs e) => ZoomService.ZoomOut();
+        private void ZoomReset_Click(object sender, RoutedEventArgs e) => ZoomService.Reset();
+
+        private void UpdateZoomButtons()
+        {
+            ZoomText.Text = $"{ZoomService.Percent}%";
+            ZoomInButton.IsEnabled = ZoomService.CanZoomIn;
+            ZoomOutButton.IsEnabled = ZoomService.CanZoomOut;
+        }
+
+        /// <summary>Ctrl + / Ctrl − / Ctrl 0 調整字體（先於表格的 + − 加減次數處理）。</summary>
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (Keyboard.Modifiers != ModifierKeys.Control) return;
+            switch (e.Key)
+            {
+                case Key.Add:
+                case Key.OemPlus:
+                    ZoomService.ZoomIn();
+                    e.Handled = true;
+                    break;
+                case Key.Subtract:
+                case Key.OemMinus:
+                    ZoomService.ZoomOut();
+                    e.Handled = true;
+                    break;
+                case Key.D0:
+                case Key.NumPad0:
+                    ZoomService.Reset();
+                    e.Handled = true;
+                    break;
+            }
+        }
+
+        /// <summary>按住 Ctrl 滾滑鼠滾輪調整字體。</summary>
+        private void Window_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (Keyboard.Modifiers != ModifierKeys.Control) return;
+            if (e.Delta > 0) ZoomService.ZoomIn();
+            else if (e.Delta < 0) ZoomService.ZoomOut();
+            e.Handled = true;
         }
 
         // ---------- 月份 ----------
@@ -194,14 +255,16 @@ namespace ServiceRecord
                 bool isWeekend = dow is 0 or 6;
                 var header = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
                 header.Children.Add(new TextBlock { Text = d.ToString(), HorizontalAlignment = HorizontalAlignment.Center });
-                header.Children.Add(new TextBlock
+                var weekday = new TextBlock
                 {
                     Text = WeekdayNames[dow],
                     FontSize = 11,
                     FontWeight = FontWeights.Normal,
                     HorizontalAlignment = HorizontalAlignment.Center,
-                    Foreground = isWeekend ? (Brush)FindResource("DangerBrush") : (Brush)FindResource("MutedBrush"),
-                });
+                };
+                // 用資源參照（等同 DynamicResource），切換深淺色時才會跟著變
+                weekday.SetResourceReference(TextBlock.ForegroundProperty, isWeekend ? "DangerBrush" : "MutedBrush");
+                header.Children.Add(weekday);
 
                 var column = new DataGridTextColumn
                 {

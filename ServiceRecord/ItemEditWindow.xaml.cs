@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using ServiceRecord.Models;
+using ServiceRecord.Services;
 
 namespace ServiceRecord
 {
@@ -16,6 +17,8 @@ namespace ServiceRecord
         public ItemEditWindow(MonthRecord record, AppSettings settings)
         {
             InitializeComponent();
+            ZoomService.FitWindow(this);       // 字體放大時視窗也跟著放大（不超過螢幕）
+            ThemeService.TrackTitleBar(this); // 標題列跟著深淺色變
             _record = record;
             _settings = settings;
             IntroText.Text = $"加到 {record.Year} 年 {record.Month} 月（所有個案都會多這一列）。";

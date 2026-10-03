@@ -3,11 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="居服紀錄表" Width="1560" Height="900" MinWidth="900" MinHeight="560"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource AppBgBrush}"
+        Background="{DynamicResource AppBgBrush}"
         FontFamily="{StaticResource UiFont}" FontSize="14"
-        Foreground="{StaticResource TextBrush}"
+        Foreground="{DynamicResource TextBrush}"
         Icon="Assets/app.ico"
-        Loaded="Window_Loaded" Closing="Window_Closing">
+        Loaded="Window_Loaded" Closing="Window_Closing"
+        PreviewKeyDown="Window_PreviewKeyDown" PreviewMouseWheel="Window_PreviewMouseWheel">
 
     <Window.Resources>
         <!-- 表格最右邊的刪除鈕 -->
@@ -31,18 +32,18 @@
         </Style>
         <Style x:Key="CountText" TargetType="TextBlock" BasedOn="{StaticResource CenterText}">
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}"/>
         </Style>
 
         <Style x:Key="WeekendCell" TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-            <Setter Property="Background" Value="#FFF3F3"/>
+            <Setter Property="Background" Value="{DynamicResource WeekendBrush}"/>
         </Style>
         <Style x:Key="TotalCell" TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-            <Setter Property="Background" Value="#F5F6FF"/>
+            <Setter Property="Background" Value="{DynamicResource TotalBrush}"/>
         </Style>
     </Window.Resources>
 
-    <Grid Margin="20,12,20,10">
+    <Grid Margin="20,12,20,10" LayoutTransform="{DynamicResource UiScale}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -114,7 +115,7 @@
                             <DataTemplate>
                                 <StackPanel Margin="4,0,0,0">
                                     <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0">
+                                    <TextBlock FontSize="12" Foreground="{DynamicResource MutedBrush}" Margin="0,2,0,0">
                                         <Run Text="實領"/>
                                         <Run Text="{Binding NetPayText, Mode=OneWay}"/>
                                     </TextBlock>
@@ -122,11 +123,11 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-                    <TextBlock x:Name="NoClientHint" Grid.Row="1" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}"
+                    <TextBlock x:Name="NoClientHint" Grid.Row="1" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"
                                FontSize="13" Margin="6,4" Visibility="Collapsed"
                                Text="這個月還沒有個案。&#x0a;&#x0a;按右上角「設定」新增個案，或用「匯入 Excel」讀入原本的服務紀錄表。"/>
 
-                    <Border Grid.Row="2" Background="{StaticResource AccentGradient}" CornerRadius="12" Padding="14,12" Margin="0,10,0,0">
+                    <Border Grid.Row="2" Background="{DynamicResource AccentGradient}" CornerRadius="12" Padding="14,12" Margin="0,10,0,0">
                         <StackPanel>
                             <TextBlock Text="本月月薪" Foreground="#E0E7FF" FontSize="12" FontWeight="SemiBold"/>
                             <TextBlock x:Name="MonthlyPayText" Text="0" Foreground="White" FontFamily="{StaticResource DisplayFont}"
@@ -152,7 +153,7 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel>
                             <TextBlock x:Name="ClientTitle" FontSize="18" FontWeight="SemiBold" FontFamily="{StaticResource DisplayFont}"/>
-                            <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0"
+                            <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,3,0,0"
                                        Text="點格子直接打數字，Enter 往下一格；選好格子按 + / − 加減一次，Delete 清除。"/>
                         </StackPanel>
                         <CheckBox x:Name="UsedOnlyBox" Grid.Column="1" Content="只顯示有次數的項目" VerticalAlignment="Center"
@@ -164,7 +165,7 @@
                               VirtualizingPanel.IsVirtualizing="True"/>
 
                     <TextBlock x:Name="NoDataHint" Grid.Row="1" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Foreground="{StaticResource MutedBrush}" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"/>
+                               Foreground="{DynamicResource MutedBrush}" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"/>
 
                     <Grid Grid.Row="2" Margin="0,12,0,0">
                         <Grid.ColumnDefinitions>
@@ -179,13 +180,13 @@
                             </StackPanel>
                         </Button>
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="小計" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="小計" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
                             <TextBlock x:Name="SubtotalText" Text="0" FontWeight="SemiBold" Margin="6,0,14,0" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="RatioText" Text="× 0.6" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,14,0"/>
-                            <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="10" Padding="14,6">
+                            <TextBlock x:Name="RatioText" Text="× 0.6" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                            <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="10" Padding="14,6">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="實領" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="NetPayText" Text="0" Foreground="{StaticResource AccentBrush}" FontSize="20"
+                                    <TextBlock Text="實領" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="NetPayText" Text="0" Foreground="{DynamicResource AccentTextBrush}" FontSize="20"
                                                FontWeight="Bold" Margin="8,0,0,0" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
@@ -201,8 +202,31 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBlock x:Name="StatusText" Foreground="{StaticResource MutedBrush}" FontSize="12" VerticalAlignment="Center"/>
+            <TextBlock x:Name="StatusText" Foreground="{DynamicResource MutedBrush}" FontSize="12" VerticalAlignment="Center"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <!-- 字體大小：Ctrl + / Ctrl − / Ctrl 0，或按住 Ctrl 滾滑鼠滾輪 -->
+                <TextBlock Text="字體" Foreground="{DynamicResource MutedBrush}" FontSize="12" VerticalAlignment="Center" Margin="0,0,2,0"/>
+                <Button x:Name="ZoomOutButton" Style="{StaticResource GhostButton}" Click="ZoomOut_Click" Padding="8,6"
+                        AutomationProperties.Name="縮小字體" ToolTip="縮小字體（Ctrl −）">
+                    <TextBlock Style="{StaticResource Icon}" Text="&#xE71F;" FontSize="12"/>
+                </Button>
+                <Button x:Name="ZoomResetButton" Style="{StaticResource GhostButton}" Click="ZoomReset_Click" Padding="6,6" FontSize="12"
+                        MinWidth="48" AutomationProperties.Name="字體大小" ToolTip="恢復 100%（Ctrl 0）">
+                    <TextBlock x:Name="ZoomText" Text="100%"/>
+                </Button>
+                <Button x:Name="ZoomInButton" Style="{StaticResource GhostButton}" Click="ZoomIn_Click" Padding="8,6"
+                        AutomationProperties.Name="放大字體" ToolTip="放大字體（Ctrl +）">
+                    <TextBlock Style="{StaticResource Icon}" Text="&#xE8A3;" FontSize="12"/>
+                </Button>
+                <Border Width="1" Background="{DynamicResource LineBrush}" Margin="8,6"/>
+                <Button x:Name="ThemeButton" Style="{StaticResource GhostButton}" Click="Theme_Click" Padding="10,6" FontSize="12"
+                        AutomationProperties.Name="切換主題">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="ThemeIcon" Style="{StaticResource Icon}" Text="&#xE770;" FontSize="12" Margin="0,0,6,0"/>
+                        <TextBlock x:Name="ThemeText" Text="跟隨系統"/>
+                    </StackPanel>
+                </Button>
+                <Border Width="1" Background="{DynamicResource LineBrush}" Margin="8,6"/>
                 <Button Style="{StaticResource GhostButton}" Click="Shortcut_Click" AutomationProperties.Name="桌面捷徑" Padding="10,6" FontSize="12">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Style="{StaticResource Icon}" Text="&#xE8A7;" FontSize="12" Margin="0,0,6,0"/>

@@ -25,8 +25,14 @@ namespace ServiceRecord
             // 安裝版：補開始功能表捷徑、更新「應用程式」清單；剛安裝完再建立桌面捷徑
             InstallService.OnStartup(args, new UpdateService().Version);
 
+            ThemeService.Load(); // 上次選的外觀（跟隨系統 / 淺色 / 深色）
+            ZoomService.Load();  // 上次的字體大小
+
             var app = new App();
             app.InitializeComponent();
+            ThemeService.Apply();
+            ThemeService.WatchSystemTheme();
+            ZoomService.Apply();
             app.Run();
         }
 

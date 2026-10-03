@@ -3,9 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="設定" Width="760" Height="680" MinWidth="620" MinHeight="480"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
-        Background="{StaticResource AppBgBrush}"
+        Background="{DynamicResource AppBgBrush}"
         FontFamily="{StaticResource UiFont}" FontSize="14"
-        Foreground="{StaticResource TextBrush}">
+        Foreground="{DynamicResource TextBrush}">
 
     <Window.Resources>
         <Style x:Key="ToolButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
@@ -14,13 +14,13 @@
         </Style>
     </Window.Resources>
 
-    <Grid Margin="20">
+    <Grid Margin="20" LayoutTransform="{DynamicResource UiScale}">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TabControl x:Name="Tabs" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource CardBorderBrush}" Padding="16">
+        <TabControl x:Name="Tabs" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource CardBorderBrush}" Padding="16">
             <!-- ===== 個案 ===== -->
             <TabItem Header="個案" Padding="16,6">
                 <Grid>
@@ -32,7 +32,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.ColumnSpan="2" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,0,0,10"
+                    <TextBlock Grid.ColumnSpan="2" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,0,0,10"
                                Text="直接在表格裡改姓名和地點。地點會寫在匯出的 Excel 上，例如「慶東街(王林妙芳)」。"/>
                     <DataGrid x:Name="ClientGrid" Grid.Row="1" SelectionUnit="FullRow" RowHeight="32">
                         <DataGrid.Columns>
@@ -62,7 +62,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.ColumnSpan="2" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,0,0,10"
+                    <TextBlock Grid.ColumnSpan="2" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,0,0,10"
                                Text="這是新月份預設的服務項目，可以新增、刪除、修改代碼／名稱／單價和順序。已經有紀錄的月份不會自動改變，儲存時會問要不要套用到目前的月份。"/>
                     <DataGrid x:Name="ItemGrid" Grid.Row="1" SelectionUnit="FullRow" RowHeight="30">
                         <DataGrid.Columns>
@@ -92,11 +92,11 @@
                 <StackPanel MaxWidth="460" HorizontalAlignment="Left">
                     <TextBlock Text="居服員姓名（匯出檔名用）" Style="{StaticResource FieldLabel}"/>
                     <TextBox x:Name="WorkerBox"/>
-                    <TextBlock x:Name="FileNamePreview" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="2,6,0,20" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="FileNamePreview" Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="2,6,0,20" TextWrapping="Wrap"/>
 
                     <TextBlock Text="實領比例" Style="{StaticResource FieldLabel}"/>
                     <TextBox x:Name="RatioBox" Width="120" HorizontalAlignment="Left"/>
-                    <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="2,6,0,0" TextWrapping="Wrap"
+                    <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="2,6,0,0" TextWrapping="Wrap"
                                Text="實領 = 金額小計 × 比例。原本的 Excel 是 0.6（六成）。"/>
                 </StackPanel>
             </TabItem>

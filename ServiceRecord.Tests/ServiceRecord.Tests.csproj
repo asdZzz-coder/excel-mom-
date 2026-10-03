@@ -27,6 +27,8 @@
     <Compile Include="..\ServiceRecord\Services\ExcelImporter.cs" Link="Source\ExcelImporter.cs" />
     <Compile Include="..\ServiceRecord\Services\ShortcutService.cs" Link="Source\ShortcutService.cs" />
     <Compile Include="..\ServiceRecord\Services\InstallService.cs" Link="Source\InstallService.cs" />
+    <Compile Include="..\ServiceRecord\Services\ThemeService.cs" Link="Source\ThemeService.cs" />
+    <Compile Include="..\ServiceRecord\Services\ZoomService.cs" Link="Source\ZoomService.cs" />
   </ItemGroup>
 
   <ItemGroup>

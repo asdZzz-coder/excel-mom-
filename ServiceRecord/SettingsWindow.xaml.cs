@@ -19,7 +19,8 @@ namespace ServiceRecord
         public SettingsWindow(AppSettings settings)
         {
             InitializeComponent();
-            Height = Math.Min(Height, SystemParameters.WorkArea.Height - 20);
+            ZoomService.FitWindow(this);       // 字體放大時視窗也跟著放大（不超過螢幕）
+            ThemeService.TrackTitleBar(this); // 標題列跟著深淺色變
             _settings = settings;
             _clients = new ObservableCollection<Client>(settings.Clients);
             _items = new ObservableCollection<ServiceItem>(settings.ServiceItems);

@@ -3,15 +3,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="新增服務項目" Width="460" SizeToContent="Height"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
-        Background="{StaticResource AppBgBrush}"
+        Background="{DynamicResource AppBgBrush}"
         FontFamily="{StaticResource UiFont}" FontSize="14"
-        Foreground="{StaticResource TextBrush}">
+        Foreground="{DynamicResource TextBrush}">
 
-    <StackPanel Margin="22">
-        <TextBlock x:Name="IntroText" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,0,0,14"/>
+    <StackPanel Margin="22" LayoutTransform="{DynamicResource UiScale}">
+        <TextBlock x:Name="IntroText" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,0,0,14"/>
 
         <TextBlock Text="從服務項目清單選（也可以不選，直接填下面）" Style="{StaticResource FieldLabel}"/>
-        <ComboBox x:Name="PresetBox" SelectionChanged="PresetBox_SelectionChanged" Padding="10,7" Margin="0,0,0,16"/>
+        <ComboBox x:Name="PresetBox" SelectionChanged="PresetBox_SelectionChanged" Margin="0,0,0,16"/>
 
         <Grid>
             <Grid.ColumnDefinitions>
