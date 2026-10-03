@@ -25,7 +25,8 @@
     <Compile Include="..\ServiceRecord\Services\PayCalculator.cs" Link="Source\PayCalculator.cs" />
     <Compile Include="..\ServiceRecord\Services\ExcelExporter.cs" Link="Source\ExcelExporter.cs" />
     <Compile Include="..\ServiceRecord\Services\ExcelImporter.cs" Link="Source\ExcelImporter.cs" />
-    <Compile Include="..\ServiceRecord\Services\DesktopShortcutService.cs" Link="Source\DesktopShortcutService.cs" />
+    <Compile Include="..\ServiceRecord\Services\ShortcutService.cs" Link="Source\ShortcutService.cs" />
+    <Compile Include="..\ServiceRecord\Services\InstallService.cs" Link="Source\InstallService.cs" />
   </ItemGroup>
 
   <ItemGroup>

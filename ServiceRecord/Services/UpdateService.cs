@@ -10,16 +10,16 @@ namespace ServiceRecord.Services
     public record UpdateInfo(Version Version, string DownloadUrl, long Size);
 
     /// <summary>
-    /// 線上更新：程式以 ClickOnce 安裝，但不使用 ClickOnce 內建的更新。
-    /// 由本類別向 GitHub Releases 查詢最新版，使用者同意後下載 ClickOnce 安裝包（zip），
-    /// 放回當初安裝的資料夾後開啟 ServiceRecord.application，由 ClickOnce 升級成新版。
+    /// 線上更新：向 GitHub Releases 查詢最新版，使用者同意後下載安裝包（zip）、解壓，
+    /// 執行裡面的「安裝.cmd /update」。安裝.cmd 會等本程式結束，把新版複製到安裝資料夾後重新開啟。
     /// 只有「安裝版」才能更新；直接從 Visual Studio / dotnet run 執行時 IsInstalled 為 false，會略過。
     /// </summary>
     public class UpdateService
     {
         private const string Owner = "asdZzz-coder";
         private const string Repo = "excel-mom-";
-        public const string PackageAssetName = "ServiceRecord-ClickOnce.zip";
+        public const string PackageAssetName = "ServiceRecord-Setup.zip";
+        private const string InstallScript = "安裝.cmd";
 
         /// <summary>下載與解壓更新包的資料夾（啟動時由 CleanupService 清掉）。</summary>
         public static readonly string DownloadFolder = Path.Combine(Path.GetTempPath(), "ServiceRecord-Update");
@@ -34,15 +34,9 @@ namespace ServiceRecord.Services
             return c;
         }
 
-        /// <summary>
-        /// 是否為 ClickOnce 安裝版。ClickOnce 啟動程式時會設定 ClickOnce_IsNetworkDeployed；
-        /// 保險起見也檢查執行位置是否在 ClickOnce 的安裝快取（%LocalAppData%\Apps\2.0）。
-        /// </summary>
-        public bool IsInstalled =>
-            string.Equals(Environment.GetEnvironmentVariable("ClickOnce_IsNetworkDeployed"), "true", StringComparison.OrdinalIgnoreCase)
-            || AppContext.BaseDirectory.Contains(@"\Apps\2.0\", StringComparison.OrdinalIgnoreCase);
+        public bool IsInstalled => InstallService.IsInstalled;
 
-        /// <summary>程式本身的版本（建置時由 -p:Version 帶入，與 ClickOnce 的 ApplicationVersion 一致）。</summary>
+        /// <summary>程式本身的版本（建置時由 -p:Version 帶入）。</summary>
         public Version Version
         {
             get
@@ -76,7 +70,7 @@ namespace ServiceRecord.Services
             return null; // 該版本還沒有附上安裝包（打包尚未完成）
         }
 
-        /// <summary>下載新版安裝包、解壓並啟動安裝；呼叫端應在這之後結束程式。</summary>
+        /// <summary>下載新版安裝包、解壓並啟動安裝.cmd；呼叫端應在這之後結束程式。</summary>
         public async Task DownloadAndLaunchAsync(UpdateInfo info, Action<int>? progress = null)
         {
             // 先清掉先前（例如失敗或中斷的更新）遺留的檔案
@@ -104,77 +98,11 @@ namespace ServiceRecord.Services
             }
 
             await Task.Run(() => ZipFile.ExtractToDirectory(zipPath, extractDir));
-            if (!File.Exists(Path.Combine(extractDir, ManifestName)))
-                throw new FileNotFoundException("更新檔內容不完整，請稍後再試。", ManifestName);
+            var script = Path.Combine(extractDir, InstallScript);
+            if (!File.Exists(script) || !File.Exists(Path.Combine(extractDir, "app", InstallService.ExeName)))
+                throw new FileNotFoundException("更新檔內容不完整，請稍後再試。", InstallScript);
 
-            // ClickOnce 會記住「從哪個資料夾安裝的」，從別的位置安裝同一個程式會被拒絕。
-            // 所以把新版放回當初安裝的同一個資料夾，再從那裡執行，ClickOnce 就會當成一般升級。
-            var installDir = FindInstallSourceFolder() ?? Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ServiceRecord-Setup");
-            await Task.Run(() => ReplaceInstallSource(extractDir, installDir));
-
-            var manifest = Path.Combine(installDir, ManifestName);
-            Process.Start(new ProcessStartInfo(manifest) { UseShellExecute = true, WorkingDirectory = installDir });
-        }
-
-        private const string ManifestName = "ServiceRecord.application";
-
-        /// <summary>
-        /// 找出當初安裝時用的 ServiceRecord.application 所在資料夾：
-        /// 先看 ClickOnce 提供的環境變數，再看開始功能表捷徑（.appref-ms 內記錄了安裝來源）。
-        /// </summary>
-        private static string? FindInstallSourceFolder()
-        {
-            foreach (var name in new[] { "ClickOnce_UpdateLocation", "ClickOnce_ActivationUri" })
-            {
-                var dir = FolderFromManifestUri(Environment.GetEnvironmentVariable(name));
-                if (dir != null) return dir;
-            }
-
-            try
-            {
-                var programs = Environment.GetFolderPath(Environment.SpecialFolder.Programs);
-                foreach (var file in Directory.EnumerateFiles(programs, "*.appref-ms", SearchOption.AllDirectories))
-                {
-                    // 內容格式：file:///C:/.../ServiceRecord.application#ServiceRecord.application, Culture=...
-                    var text = File.ReadAllText(file);
-                    if (!text.Contains(ManifestName, StringComparison.OrdinalIgnoreCase)) continue;
-                    var dir = FolderFromManifestUri(text.Split('#')[0].Trim().Trim('\0', '\uFEFF'));
-                    if (dir != null) return dir;
-                }
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
-            return null;
-        }
-
-        /// <summary>只接受本機（或網路芳鄰）路徑的 .application；網址或不存在的磁碟回傳 null。</summary>
-        private static string? FolderFromManifestUri(string? value)
-        {
-            if (string.IsNullOrWhiteSpace(value)) return null;
-            if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || !uri.IsFile) return null;
-            var dir = Path.GetDirectoryName(uri.LocalPath);
-            if (dir == null || !Directory.Exists(Path.GetPathRoot(dir))) return null;
-            return dir;
-        }
-
-        /// <summary>
-        /// 用新版安裝包取代安裝來源資料夾的內容：只動 ClickOnce 自己的檔案
-        /// （ServiceRecord.application、安裝.cmd、Application Files\ServiceRecord_*），其他檔案不碰。
-        /// </summary>
-        private static void ReplaceInstallSource(string from, string to)
-        {
-            Directory.CreateDirectory(to);
-            var oldVersions = Path.Combine(to, "Application Files");
-            if (Directory.Exists(oldVersions))
-                foreach (var d in Directory.EnumerateDirectories(oldVersions, "ServiceRecord_*"))
-                    TryDeleteDirectory(d);
-
-            foreach (var src in Directory.EnumerateFiles(from, "*", SearchOption.AllDirectories))
-            {
-                var dst = Path.Combine(to, Path.GetRelativePath(from, src));
-                Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
-                File.Copy(src, dst, overwrite: true);
-            }
+            Process.Start(new ProcessStartInfo(script, "/update") { UseShellExecute = true, WorkingDirectory = extractDir });
         }
 
         internal static void TryDeleteDirectory(string path)

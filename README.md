@@ -17,11 +17,13 @@
 
 ## 安裝（給使用的人）
 
-1. 到 [Releases](https://github.com/asdZzz-coder/excel-mom-/releases) 下載 `ServiceRecord-ClickOnce.zip`。
-2. 整個解壓縮後，執行「安裝.cmd」，在出現的安裝視窗按「安裝」。
-3. 安裝完成後，開始功能表和桌面會有「居服紀錄表」。之後有新版本時，打開程式會詢問是否更新。
+1. 到 [Releases](https://github.com/asdZzz-coder/excel-mom-/releases) 下載 `ServiceRecord-Setup.zip`。
+2. **整個解壓縮**後，執行「安裝.cmd」。
+3. 程式會自動打開，開始功能表和桌面會有「居服紀錄表」。之後有新版本時，打開程式會詢問是否更新。
 
-安裝方式跟 [password](https://github.com/asdZzz-coder/password) 相同：ClickOnce（自帶 .NET 執行環境，不用另外安裝），由「安裝.cmd」先複製到 `%LOCALAPPDATA%\ServiceRecord-Setup` 再安裝，避免 ClickOnce「已從其他位置安裝」的錯誤。
+- 安裝在 `%LOCALAPPDATA%\Programs\ServiceRecord`，不需要系統管理員權限，自帶 .NET 執行環境。
+- 解除安裝：Windows「設定 → 應用程式」找「居服紀錄表」。紀錄（`%AppData%\ServiceRecord`）會保留。
+- 不用 ClickOnce：ClickOnce 一定要搭配每個程式各自產生、沒有簽章的 `Launcher.exe`，開著 Windows「智慧型應用程式控制」的電腦會擋下它，安裝時出現「部署中某些檔案已損毀」。
 
 ## 開發
 
@@ -32,5 +34,4 @@ dotnet test ServiceRecord.Tests/ServiceRecord.Tests.csproj
 
 - `ServiceRecord/`：WPF 程式（.NET 10）。
 - `ServiceRecord.Tests/`：xunit 測試。用原本 Excel 驗證的測試需要 `example/` 裡的範例檔；範例檔含個案資料，不放上 GitHub，沒有時會自動略過。
-- 發佈：推送 `v*` 標籤（例如 `v1.0.0`），GitHub Actions 會跑測試、用 ClickOnce 打包、建立 Release（見 `.github/workflows/release.yml`）。
-  本機開著 Windows「智慧型應用程式控制」時，ClickOnce 產生資訊清單會被擋（MSB3171），所以一律由 GitHub Actions 打包。
+- 發佈：推送 `v*` 標籤（例如 `v1.0.1`），GitHub Actions 會跑測試、`dotnet publish`、把「安裝.cmd + app 資料夾」壓成 `ServiceRecord-Setup.zip` 並建立 Release（見 `.github/workflows/release.yml`）。

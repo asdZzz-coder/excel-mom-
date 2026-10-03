@@ -503,14 +503,11 @@ namespace ServiceRecord
             }
         }
 
-        // ---------- 啟動時整理捷徑、檢查更新 ----------
+        // ---------- 啟動時清理、檢查更新 ----------
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
             CleanupService.RunInBackground(); // 清掉更新後遺留的舊檔
-            DesktopShortcutService.TidyUp(_updater.IsInstalled);     // 更新後：重複捷徑只留最新的、工作列釘選改指向新版
-            DesktopShortcutService.EnsureOnce(_updater.IsInstalled); // 安裝版第一次開啟時補上桌面捷徑
-
             await CheckForUpdateAsync(manual: false);
         }
 
@@ -518,11 +515,7 @@ namespace ServiceRecord
         {
             try
             {
-                if (DesktopShortcutService.Create(_updater.IsInstalled) == ShortcutResult.SourceNotFound)
-                {
-                    MessageBox.Show("找不到開始功能表裡的「居服紀錄表」，請重新執行安裝.cmd 後再試。", "桌面捷徑", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
+                ShortcutService.CreateDesktop(_updater.IsInstalled, Environment.ProcessPath ?? InstallService.InstalledExe);
                 MessageBox.Show("已在桌面建立「居服紀錄表」捷徑。", "桌面捷徑", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or COMException)
