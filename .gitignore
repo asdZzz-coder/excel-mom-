@@ -1,0 +1,8 @@
+.vs/
+bin/
+obj/
+*.user
+*.suo
+dist/
+# 範例檔含個案姓名與服務紀錄，不放上 GitHub
+example/

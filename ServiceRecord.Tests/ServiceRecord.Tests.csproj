@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
+  </ItemGroup>
+
+  <!--
+    直接把要測的原始碼編進測試專案（不引用 ServiceRecord.exe），
+    這樣測試不會跟主程式搶同一個輸出檔，也不需要啟動 WPF 視窗。
+  -->
+  <ItemGroup>
+    <Compile Include="..\ServiceRecord\Models\*.cs" LinkBase="Source\Models" />
+    <Compile Include="..\ServiceRecord\Services\DataStore.cs" Link="Source\DataStore.cs" />
+    <Compile Include="..\ServiceRecord\Services\PayCalculator.cs" Link="Source\PayCalculator.cs" />
+    <Compile Include="..\ServiceRecord\Services\ExcelExporter.cs" Link="Source\ExcelExporter.cs" />
+    <Compile Include="..\ServiceRecord\Services\ExcelImporter.cs" Link="Source\ExcelImporter.cs" />
+    <Compile Include="..\ServiceRecord\Services\DesktopShortcutService.cs" Link="Source\DesktopShortcutService.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,110 @@
+<Window x:Class="ServiceRecord.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="設定" Width="760" Height="680" MinWidth="620" MinHeight="480"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{StaticResource AppBgBrush}"
+        FontFamily="{StaticResource UiFont}" FontSize="14"
+        Foreground="{StaticResource TextBrush}">
+
+    <Window.Resources>
+        <Style x:Key="ToolButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TabControl x:Name="Tabs" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource CardBorderBrush}" Padding="16">
+            <!-- ===== 個案 ===== -->
+            <TabItem Header="個案" Padding="16,6">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.ColumnSpan="2" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,0,0,10"
+                               Text="直接在表格裡改姓名和地點。地點會寫在匯出的 Excel 上，例如「慶東街(王林妙芳)」。"/>
+                    <DataGrid x:Name="ClientGrid" Grid.Row="1" SelectionUnit="FullRow" RowHeight="32">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="姓名" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="*"
+                                                EditingElementStyle="{StaticResource CellEditBoxLeft}"/>
+                            <DataGridTextColumn Header="地點" Binding="{Binding Location, UpdateSourceTrigger=PropertyChanged}" Width="*"
+                                                EditingElementStyle="{StaticResource CellEditBoxLeft}"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="12,0,0,0" Width="120">
+                        <Button Style="{StaticResource PrimaryButton}" Content="新增個案" Click="AddClient_Click" Margin="0,0,0,8"/>
+                        <Button Style="{StaticResource ToolButton}" Content="上移" Click="MoveClientUp_Click"/>
+                        <Button Style="{StaticResource ToolButton}" Content="下移" Click="MoveClientDown_Click"/>
+                        <Button Style="{StaticResource DangerButton}" Content="刪除個案" Click="DeleteClient_Click" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- ===== 服務項目 ===== -->
+            <TabItem Header="服務項目" Padding="16,6">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.ColumnSpan="2" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,0,0,10"
+                               Text="這是新月份預設的服務項目，可以新增、刪除、修改代碼／名稱／單價和順序。已經有紀錄的月份不會自動改變，儲存時會問要不要套用到目前的月份。"/>
+                    <DataGrid x:Name="ItemGrid" Grid.Row="1" SelectionUnit="FullRow" RowHeight="30">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="代碼" Binding="{Binding Code, UpdateSourceTrigger=PropertyChanged}" Width="90"
+                                                EditingElementStyle="{StaticResource CellEditBoxLeft}"/>
+                            <DataGridTextColumn Header="服務項目" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="*"
+                                                EditingElementStyle="{StaticResource CellEditBoxLeft}"/>
+                            <DataGridTextColumn Header="單價" Binding="{Binding Price, UpdateSourceTrigger=PropertyChanged}" Width="80"
+                                                EditingElementStyle="{StaticResource CellEditBox}"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="12,0,0,0" Width="120">
+                        <Button Style="{StaticResource PrimaryButton}" Content="新增項目" Click="AddItem_Click" Margin="0,0,0,8"/>
+                        <Button Style="{StaticResource ToolButton}" Content="上移" Click="MoveItemUp_Click"/>
+                        <Button Style="{StaticResource ToolButton}" Content="下移" Click="MoveItemDown_Click"/>
+                        <Button Style="{StaticResource DangerButton}" Content="刪除項目" Click="DeleteItem_Click" Margin="0,8,0,16"/>
+                        <Button Style="{StaticResource ToolButton}" Click="RestoreDefaults_Click"
+                                ToolTip="把預設的 31 個服務項目加回來；已經有的代碼不會重複加">
+                            <TextBlock Text="加回預設項目" TextWrapping="Wrap"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- ===== 其他 ===== -->
+            <TabItem Header="其他" Padding="16,6">
+                <StackPanel MaxWidth="460" HorizontalAlignment="Left">
+                    <TextBlock Text="居服員姓名（匯出檔名用）" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="WorkerBox"/>
+                    <TextBlock x:Name="FileNamePreview" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="2,6,0,20" TextWrapping="Wrap"/>
+
+                    <TextBlock Text="實領比例" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="RatioBox" Width="120" HorizontalAlignment="Left"/>
+                    <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="2,6,0,0" TextWrapping="Wrap"
+                               Text="實領 = 金額小計 × 比例。原本的 Excel 是 0.6（六成）。"/>
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="取消" IsCancel="True" Margin="0,0,8,0" MinWidth="90"/>
+            <Button Style="{StaticResource PrimaryButton}" Content="儲存" Click="Save_Click" MinWidth="90"/>
+        </StackPanel>
+    </Grid>
+</Window>

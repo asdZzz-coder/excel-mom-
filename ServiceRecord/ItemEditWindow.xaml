@@ -1,0 +1,47 @@
+<Window x:Class="ServiceRecord.ItemEditWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="新增服務項目" Width="460" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
+        Background="{StaticResource AppBgBrush}"
+        FontFamily="{StaticResource UiFont}" FontSize="14"
+        Foreground="{StaticResource TextBrush}">
+
+    <StackPanel Margin="22">
+        <TextBlock x:Name="IntroText" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,0,0,14"/>
+
+        <TextBlock Text="從服務項目清單選（也可以不選，直接填下面）" Style="{StaticResource FieldLabel}"/>
+        <ComboBox x:Name="PresetBox" SelectionChanged="PresetBox_SelectionChanged" Padding="10,7" Margin="0,0,0,16"/>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="110"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="90"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="代碼" Style="{StaticResource FieldLabel}"/>
+                <TextBox x:Name="CodeBox"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+                <TextBlock Text="服務項目" Style="{StaticResource FieldLabel}"/>
+                <TextBox x:Name="NameBox"/>
+            </StackPanel>
+            <StackPanel Grid.Column="4">
+                <TextBlock Text="單價" Style="{StaticResource FieldLabel}"/>
+                <TextBox x:Name="PriceBox"/>
+            </StackPanel>
+        </Grid>
+
+        <CheckBox x:Name="AddToSettingsBox" Margin="0,16,0,0" IsChecked="True">
+            <TextBlock TextWrapping="Wrap" Text="也加到「設定 → 服務項目」，之後的新月份也會有"/>
+        </CheckBox>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
+            <Button Content="取消" IsCancel="True" Margin="0,0,8,0" MinWidth="90"/>
+            <Button Style="{StaticResource PrimaryButton}" Content="新增" IsDefault="True" Click="Ok_Click" MinWidth="90"/>
+        </StackPanel>
+    </StackPanel>
+</Window>
