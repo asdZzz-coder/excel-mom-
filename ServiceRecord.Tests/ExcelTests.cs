@@ -154,6 +154,27 @@ namespace ServiceRecord.Tests
         }
 
         [Fact]
+        public void Export_MarksHolidaysAndWeekends()
+        {
+            var path = ExportToTemp(Sample(2026, 6));
+
+            using var wb = new XLWorkbook(path);
+            var ws = wb.Worksheets.First();
+            var pink = XLColor.FromHtml("#FDECEC");
+            int Col(int day) => ExcelExporter.FirstDayCol + day - 1;
+
+            // 6/19 端午節（週五）：上底色、紅字、註解寫節日名稱
+            Assert.Equal(pink, ws.Cell(5, Col(19)).Style.Fill.BackgroundColor);
+            Assert.True(ws.Cell(3, Col(19)).HasComment);
+            Assert.Contains("端午節", ws.Cell(3, Col(19)).GetComment().Text);
+            // 6/20 週六：上底色、沒有註解
+            Assert.Equal(pink, ws.Cell(5, Col(20)).Style.Fill.BackgroundColor);
+            Assert.False(ws.Cell(3, Col(20)).HasComment);
+            // 6/18 平日
+            Assert.NotEqual(pink, ws.Cell(5, Col(18)).Style.Fill.BackgroundColor);
+        }
+
+        [Fact]
         public void DefaultFileName_MatchesOriginalNaming()
         {
             Assert.Equal("2026-06份 洪淑瑩靜鑫服務紀錄表.xlsx", ExcelExporter.DefaultFileName(Sample(), "洪淑瑩靜鑫"));

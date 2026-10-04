@@ -20,6 +20,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- 內附的政府辦公日曆（國定假日、補假），沒有網路時用；新的年份程式會自己下載 -->
+    <EmbeddedResource Include="Holidays\*.json" LogicalName="ServiceRecord.Holidays.%(Filename).json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- 自訂 Main（Program.cs）：確保只開一個視窗 -->
     <ApplicationDefinition Remove="App.xaml" />
     <Page Include="App.xaml" />

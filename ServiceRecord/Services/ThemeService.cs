@@ -43,9 +43,10 @@ namespace ServiceRecord.Services
             ("AccentSoftBrush",         "#EEF0FF", "#272B4A"),
             ("AccentTextBrush",         "#4F46E5", "#A5B4FC"),
             ("TextBrush",               "#111827", "#E6E8EE"),
-            ("MutedBrush",              "#5F6675", "#A0A6B4"),
+            ("MutedBrush",              "#4B5263", "#B8BECA"),
             ("SubtleBrush",             "#9CA3AF", "#717887"),
             ("LineBrush",               "#E2E5EC", "#30343F"),
+            ("GridLineBrush",           "#BFC5D0", "#454B59"), // 表格格線：比一般分隔線深，格子才分得清楚
             ("InputBgBrush",            "#F8F9FC", "#15181E"),
             ("DangerBrush",             "#C81E1E", "#F87171"),
             ("DangerSoftBrush",         "#FEF2F2", "#2C1B1F"),
@@ -56,7 +57,7 @@ namespace ServiceRecord.Services
             ("BorderHoverBrush",        "#CDD1DC", "#444A57"),
             ("GhostHoverBrush",         "#E9EBF2", "#262A33"),
             ("GhostPressedBrush",       "#DFE2EB", "#30353F"),
-            ("ScrollThumbBrush",        "#CBD0DB", "#3A3F4B"),
+            ("ScrollThumbBrush",        "#B4BAC6", "#4A505D"),
             ("ScrollThumbHoverBrush",   "#9CA3AF", "#525967"),
             ("ScrollThumbPressedBrush", "#6B7280", "#6B7280"),
             // 服務紀錄表格

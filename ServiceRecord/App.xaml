@@ -17,9 +17,10 @@
         <SolidColorBrush x:Key="AccentSoftBrush" Color="#EEF0FF"/>
         <SolidColorBrush x:Key="AccentTextBrush" Color="#4F46E5"/>
         <SolidColorBrush x:Key="TextBrush" Color="#111827"/>
-        <SolidColorBrush x:Key="MutedBrush" Color="#5F6675"/>
+        <SolidColorBrush x:Key="MutedBrush" Color="#4B5263"/>
         <SolidColorBrush x:Key="SubtleBrush" Color="#9CA3AF"/>
         <SolidColorBrush x:Key="LineBrush" Color="#E2E5EC"/>
+        <SolidColorBrush x:Key="GridLineBrush" Color="#BFC5D0"/>
         <SolidColorBrush x:Key="InputBgBrush" Color="#F8F9FC"/>
         <SolidColorBrush x:Key="DangerBrush" Color="#C81E1E"/>
         <SolidColorBrush x:Key="DangerSoftBrush" Color="#FEF2F2"/>
@@ -30,7 +31,7 @@
         <SolidColorBrush x:Key="BorderHoverBrush" Color="#CDD1DC"/>
         <SolidColorBrush x:Key="GhostHoverBrush" Color="#E9EBF2"/>
         <SolidColorBrush x:Key="GhostPressedBrush" Color="#DFE2EB"/>
-        <SolidColorBrush x:Key="ScrollThumbBrush" Color="#CBD0DB"/>
+        <SolidColorBrush x:Key="ScrollThumbBrush" Color="#B4BAC6"/>
         <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#9CA3AF"/>
         <SolidColorBrush x:Key="ScrollThumbPressedBrush" Color="#6B7280"/>
         <SolidColorBrush x:Key="AltRowBrush" Color="#FAFBFD"/>
@@ -57,12 +58,12 @@
 
         <Style x:Key="Icon" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="16"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
         <Style x:Key="FieldLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
             <Setter Property="Margin" Value="2,0,0,6"/>
@@ -71,7 +72,7 @@
         <!-- ===== 輸入框：淺底、聚焦時白底 + 強調色邊框與底線 ===== -->
         <Style TargetType="TextBox">
             <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="16"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="Background" Value="{DynamicResource InputBgBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
@@ -102,7 +103,7 @@
 
         <Style TargetType="PasswordBox">
             <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="16"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="Background" Value="{DynamicResource InputBgBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
@@ -135,7 +136,7 @@
         <!-- 一般按鈕：白底細框，滑過變淺灰 -->
         <Style x:Key="BaseButton" TargetType="Button">
             <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="15"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="14,8"/>
             <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
@@ -240,11 +241,11 @@
 
         <!-- 小型圖示按鈕（刪除條列項目用） -->
         <Style x:Key="IconButton" TargetType="Button">
-            <Setter Property="Width" Value="26"/>
-            <Setter Property="Height" Value="26"/>
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
-            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="Foreground" Value="{DynamicResource SubtleBrush}"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -328,7 +329,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Thumb">
-                        <Border x:Name="Bd" CornerRadius="3" Background="{DynamicResource ScrollThumbBrush}"/>
+                        <Border x:Name="Bd" CornerRadius="5" Background="{DynamicResource ScrollThumbBrush}"/>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ScrollThumbHoverBrush}"/>
@@ -343,8 +344,8 @@
         </Style>
 
         <Style TargetType="ScrollBar">
-            <Setter Property="Width" Value="6"/>
-            <Setter Property="MinWidth" Value="6"/>
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="MinWidth" Value="10"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -360,8 +361,8 @@
             <Style.Triggers>
                 <Trigger Property="Orientation" Value="Horizontal">
                     <Setter Property="Width" Value="Auto"/>
-                    <Setter Property="Height" Value="6"/>
-                    <Setter Property="MinHeight" Value="6"/>
+                    <Setter Property="Height" Value="10"/>
+                    <Setter Property="MinHeight" Value="10"/>
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ScrollBar">
@@ -429,10 +430,10 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Border x:Name="Box" Width="18" Height="18" CornerRadius="5" BorderThickness="1.5"
+                            <Border x:Name="Box" Width="20" Height="20" CornerRadius="5" BorderThickness="1.5"
                                     BorderBrush="{DynamicResource BorderHoverBrush}" Background="{DynamicResource InputBgBrush}"
                                     VerticalAlignment="Center">
-                                <TextBlock x:Name="Check" Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="11"
+                                <TextBlock x:Name="Check" Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="12"
                                            Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
                             </Border>
                             <ContentPresenter Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True"/>
@@ -482,7 +483,7 @@
 
         <Style TargetType="ComboBox">
             <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="16"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="Padding" Value="12,8,32,8"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -591,7 +592,7 @@
         <!-- ===== 提示文字 ===== -->
         <Style TargetType="ToolTip">
             <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
@@ -620,18 +621,18 @@
         <!-- ===== 表格（服務紀錄、設定裡的清單） ===== -->
         <Style TargetType="DataGrid">
             <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="15"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
             <Setter Property="RowBackground" Value="{DynamicResource CardBrush}"/>
             <Setter Property="AlternatingRowBackground" Value="{DynamicResource AltRowBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource GridLineBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="GridLinesVisibility" Value="All"/>
-            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource LineBrush}"/>
-            <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource LineBrush}"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource GridLineBrush}"/>
+            <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource GridLineBrush}"/>
             <Setter Property="HeadersVisibility" Value="Column"/>
-            <Setter Property="RowHeight" Value="30"/>
+            <Setter Property="RowHeight" Value="36"/>
             <Setter Property="CanUserAddRows" Value="False"/>
             <Setter Property="CanUserDeleteRows" Value="False"/>
             <Setter Property="CanUserReorderColumns" Value="False"/>
@@ -646,10 +647,10 @@
             <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="Padding" Value="4,6"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource GridLineBrush}"/>
             <Setter Property="BorderThickness" Value="0,0,1,1"/>
         </Style>
 

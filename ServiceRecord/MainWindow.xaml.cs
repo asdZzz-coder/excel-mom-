@@ -45,10 +45,12 @@ namespace ServiceRecord
             ThemeService.TrackTitleBar(this); // 標題列跟著深淺色變
             ThemeService.ThemeChanged += UpdateThemeButton;
             ZoomService.ScaleChanged += UpdateZoomButtons;
+            HolidayService.YearUpdated += OnHolidaysUpdated;
             Closed += (_, _) =>
             {
                 ThemeService.ThemeChanged -= UpdateThemeButton;
                 ZoomService.ScaleChanged -= UpdateZoomButtons;
+                HolidayService.YearUpdated -= OnHolidaysUpdated;
             };
             UpdateThemeButton();
             UpdateZoomButtons();
@@ -159,6 +161,8 @@ namespace ServiceRecord
             UsedOnlyBox.IsEnabled = hasClients;
 
             BuildColumns();
+            UpdateHolidayText();
+            _ = HolidayService.RefreshAsync(record.Year); // 背景下載這一年最新的官方日曆，有變動會重畫
             ClientList.SelectedItem = _clientRows.FirstOrDefault(r => r.Client.Id == _selectedClientId) ?? _clientRows.FirstOrDefault();
             if (!hasClients) ShowClient(null);
             RefreshTotals();
@@ -235,6 +239,29 @@ namespace ServiceRecord
             ItemsGrid.Visibility = NoDataHint.Visibility == Visibility.Visible ? Visibility.Hidden : Visibility.Visible;
         }
 
+        // ---------- 國定假日 ----------
+
+        /// <summary>表格上方列出本月的國定假日（例如「本月假日：6/19（五）端午節」）。</summary>
+        private void UpdateHolidayText()
+        {
+            var holidays = HolidayService.NamedHolidaysIn(_record.Year, _record.Month);
+            HolidayText.Text = holidays.Count == 0 ? "" :
+                "本月假日：" + string.Join("、", holidays.Select(h => $"{h.Date.Month}/{h.Date.Day}（{WeekdayNames[(int)h.Date.DayOfWeek]}）{h.Name}"));
+            HolidayText.Visibility = holidays.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+            HolidayText.ToolTip = HolidayService.IsOfficial(_record.Year)
+                ? "依政府行政機關辦公日曆表（人事行政總處公告）"
+                : $"{_record.Year} 年的辦公日曆還沒公告或還沒下載，先用固定的國定假日（沒有補假）";
+        }
+
+        /// <summary>背景下載到新的官方日曆：如果是正在看的年份，重畫日期欄。</summary>
+        private void OnHolidaysUpdated(int year) => Dispatcher.BeginInvoke(() =>
+        {
+            if (year != _record.Year) return;
+            CommitEdits();
+            BuildColumns();
+            UpdateHolidayText();
+        });
+
         // ---------- 表格欄位 ----------
 
         private static readonly string[] WeekdayNames = ["日", "一", "二", "三", "四", "五", "六"];
@@ -244,51 +271,56 @@ namespace ServiceRecord
             ItemsGrid.Columns.Clear();
             _dayColumns.Clear();
 
-            ItemsGrid.Columns.Add(ReadOnlyColumn("代碼", nameof(ItemRow.Code), 66, "LeftText"));
-            ItemsGrid.Columns.Add(ReadOnlyColumn("服務項目", nameof(ItemRow.Name), 168, "LeftText"));
-            ItemsGrid.Columns.Add(ReadOnlyColumn("單價", nameof(ItemRow.Price), 54, "RightText"));
+            ItemsGrid.Columns.Add(ReadOnlyColumn("代碼", nameof(ItemRow.Code), 74, "LeftText"));
+            ItemsGrid.Columns.Add(ReadOnlyColumn("服務項目", nameof(ItemRow.Name), 196, "LeftText"));
+            ItemsGrid.Columns.Add(ReadOnlyColumn("單價", nameof(ItemRow.Price), 62, "RightText"));
 
-            var weekend = (Style)FindResource("WeekendCell");
+            var offDayCell = (Style)FindResource("WeekendCell");
             for (int d = 1; d <= _record.DaysInMonth; d++)
             {
-                var dow = (int)new DateTime(_record.Year, _record.Month, d).DayOfWeek;
-                bool isWeekend = dow is 0 or 6;
-                var header = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
-                header.Children.Add(new TextBlock { Text = d.ToString(), HorizontalAlignment = HorizontalAlignment.Center });
+                var date = new DateOnly(_record.Year, _record.Month, d);
+                // 週末、國定假日、補假都標紅（官方日曆裡補行上班的週六不標）
+                bool isOff = HolidayService.IsOffDay(date);
+                var holidayName = HolidayService.NameOf(date);
+                var header = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, Background = Brushes.Transparent };
+                var dayNumber = new TextBlock { Text = d.ToString(), HorizontalAlignment = HorizontalAlignment.Center };
                 var weekday = new TextBlock
                 {
-                    Text = WeekdayNames[dow],
-                    FontSize = 11,
+                    Text = WeekdayNames[(int)date.DayOfWeek],
+                    FontSize = 13,
                     FontWeight = FontWeights.Normal,
                     HorizontalAlignment = HorizontalAlignment.Center,
                 };
                 // 用資源參照（等同 DynamicResource），切換深淺色時才會跟著變
-                weekday.SetResourceReference(TextBlock.ForegroundProperty, isWeekend ? "DangerBrush" : "MutedBrush");
+                if (isOff) dayNumber.SetResourceReference(TextBlock.ForegroundProperty, "DangerBrush");
+                weekday.SetResourceReference(TextBlock.ForegroundProperty, isOff ? "DangerBrush" : "MutedBrush");
+                header.Children.Add(dayNumber);
                 header.Children.Add(weekday);
+                if (holidayName != null) header.ToolTip = $"{date.Month}/{d} {holidayName}";
 
                 var column = new DataGridTextColumn
                 {
                     Header = header,
-                    Width = 38,
+                    Width = 44,
                     Binding = new Binding($"[{d - 1}]"),
-                    ElementStyle = (Style)FindResource("CenterText"),
+                    ElementStyle = (Style)FindResource("DayText"),
                     EditingElementStyle = (Style)FindResource("CellEditBox"),
-                    CellStyle = isWeekend ? weekend : null,
+                    CellStyle = isOff ? offDayCell : null,
                 };
                 _dayColumns[column] = d - 1;
                 ItemsGrid.Columns.Add(column);
             }
 
             var total = (Style)FindResource("TotalCell");
-            var count = ReadOnlyColumn("次數", nameof(ItemRow.CountText), 52, "CountText");
+            var count = ReadOnlyColumn("次數", nameof(ItemRow.CountText), 60, "CountText");
             count.CellStyle = total;
             ItemsGrid.Columns.Add(count);
-            var amount = ReadOnlyColumn("金額", nameof(ItemRow.AmountText), 78, "RightText");
+            var amount = ReadOnlyColumn("金額", nameof(ItemRow.AmountText), 90, "RightText");
             amount.CellStyle = total;
             ItemsGrid.Columns.Add(amount);
             ItemsGrid.Columns.Add(new DataGridTemplateColumn
             {
-                Width = 36,
+                Width = 40,
                 CellTemplate = (DataTemplate)FindResource("DeleteCellTemplate"),
                 IsReadOnly = true,
             });

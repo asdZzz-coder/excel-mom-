@@ -22,6 +22,7 @@ namespace ServiceRecord.Services
         public const int AmountCol = CountCol + 1;                     // AJ
 
         private static readonly XLColor WeekendFill = XLColor.FromHtml("#FDECEC");
+        private static readonly XLColor HolidayFont = XLColor.FromHtml("#C81E1E");
         private static readonly XLColor HeaderFill = XLColor.FromHtml("#EEF0FF");
         private static readonly XLColor TotalFill = XLColor.FromHtml("#FFF7D6");
 
@@ -117,12 +118,16 @@ namespace ServiceRecord.Services
             ws.Range(totalRow, CountCol, totalRow, AmountCol).Style.Font.Bold = true;
             ws.Cell(3, PriceCol).Style.Font.Bold = true;
 
-            // 週末上底色
+            // 放假日（週末、國定假日、補假）上底色、日期紅字；節日名稱放在日期的註解
             for (int d = 1; d <= days; d++)
             {
-                var dow = new DateTime(record.Year, record.Month, d).DayOfWeek;
-                if (dow is DayOfWeek.Saturday or DayOfWeek.Sunday)
-                    ws.Range(3, FirstDayCol + d - 1, Math.Max(lastItemRow, 4), FirstDayCol + d - 1).Style.Fill.BackgroundColor = WeekendFill;
+                var date = new DateOnly(record.Year, record.Month, d);
+                if (!HolidayService.IsOffDay(date)) continue;
+                int col = FirstDayCol + d - 1;
+                ws.Range(3, col, Math.Max(lastItemRow, 4), col).Style.Fill.BackgroundColor = WeekendFill;
+                ws.Range(3, col, 4, col).Style.Font.FontColor = HolidayFont;
+                if (HolidayService.NameOf(date) is { } name)
+                    ws.Cell(3, col).CreateComment().AddText(name);
             }
 
             // 框線、欄寬、凍結窗格、列印

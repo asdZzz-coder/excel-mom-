@@ -29,6 +29,8 @@
     <Compile Include="..\ServiceRecord\Services\InstallService.cs" Link="Source\InstallService.cs" />
     <Compile Include="..\ServiceRecord\Services\ThemeService.cs" Link="Source\ThemeService.cs" />
     <Compile Include="..\ServiceRecord\Services\ZoomService.cs" Link="Source\ZoomService.cs" />
+    <Compile Include="..\ServiceRecord\Services\HolidayService.cs" Link="Source\HolidayService.cs" />
+    <EmbeddedResource Include="..\ServiceRecord\Holidays\*.json" LogicalName="ServiceRecord.Holidays.%(Filename).json" />
   </ItemGroup>
 
   <ItemGroup>

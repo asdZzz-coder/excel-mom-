@@ -1,3 +1,6 @@
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Windows;
 using ServiceRecord.Services;
 
@@ -8,8 +11,8 @@ namespace ServiceRecord
         [STAThread]
         public static void Main(string[] args)
         {
-            // 只允許開一個視窗，避免兩個視窗互相覆蓋對方存的資料
-            using var mutex = new Mutex(true, @"Local\ServiceRecord.SingleInstance", out bool isFirst);
+            // 只允許開一個視窗，避免兩個視窗互相覆蓋對方存的資料（以資料資料夾區分：測試用的資料夾不會擋到平常用的）
+            using var mutex = new Mutex(true, SingleInstanceName(DataStore.DataDirectory), out bool isFirst);
             if (!isFirst)
             {
                 MessageBox.Show("居服紀錄表已經開著了。", "居服紀錄表");
@@ -34,6 +37,14 @@ namespace ServiceRecord
             ThemeService.WatchSystemTheme();
             ZoomService.Apply();
             app.Run();
+        }
+
+        /// <summary>同一個資料資料夾只能開一個視窗。Mutex 名稱不能有「\」，所以用路徑的雜湊。</summary>
+        private static string SingleInstanceName(string dataDirectory)
+        {
+            var path = Path.GetFullPath(dataDirectory).TrimEnd('\\').ToUpperInvariant();
+            var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(path)))[..16];
+            return $@"Local\ServiceRecord.SingleInstance.{hash}";
         }
 
         /// <summary>從「設定 → 應用程式」按解除安裝時執行。</summary>

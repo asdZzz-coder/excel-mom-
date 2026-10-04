@@ -156,6 +156,10 @@ namespace ServiceRecord.Tests
         [InlineData("AccentTextBrush", "TotalBrush", 4.5)]
         [InlineData("AccentTextBrush", "CardBrush", 4.5)]
         [InlineData("AccentBrush", "CardBrush", 3.0)]
+        // 表格格線要看得出來（非文字，WCAG 沒規定；1.5 以上明顯可見）
+        [InlineData("GridLineBrush", "CardBrush", 1.5)]
+        [InlineData("GridLineBrush", "AltRowBrush", 1.5)]
+        [InlineData("GridLineBrush", "WeekendBrush", 1.4)]
         public void Palette_TextIsReadableInBothThemes(string fg, string bg, double minRatio)
         {
             var p = ThemeService.Palette.ToDictionary(e => e.Key);
