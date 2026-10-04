@@ -193,6 +193,7 @@ namespace ServiceRecord
             }
 
             ClientTitle.Text = $"{client.Label}　{MonthLabel}";
+            _crossRow = null; // 換成新的列
             var rows = _record.Items.Select(i => new ItemRow(_record, client.Id, i, OnCountsChanged)).ToList();
             _rowsView = new ListCollectionView(rows);
             ApplyRowFilter();
@@ -262,6 +263,54 @@ namespace ServiceRecord
             UpdateHolidayText();
         });
 
+        // ---------- 十字標示 ----------
+
+        private ItemRow? _crossRow;
+        private DataGridColumn? _crossColumn;
+
+        private void ItemsGrid_CurrentCellChanged(object? sender, EventArgs e) => UpdateCrossHair();
+
+        /// <summary>選到的格子所在的服務項目（整列）和日期（整欄）上底色，方便對照要填哪一天、哪一項。</summary>
+        private void UpdateCrossHair()
+        {
+            var row = ItemsGrid.CurrentCell.Item as ItemRow;
+            var column = ItemsGrid.CurrentCell.Column;
+            if (column != null && !_dayColumns.ContainsKey(column)) column = null; // 只有日期欄才標整欄
+
+            if (_crossRow != row)
+            {
+                if (_crossRow != null) _crossRow.IsCrossRow = false;
+                if (row != null) row.IsCrossRow = true;
+                _crossRow = row;
+            }
+            if (_crossColumn != column)
+            {
+                if (_crossColumn != null) CrossHair.SetIsActive(_crossColumn, false); // 日期標題
+                if (column != null) CrossHair.SetIsActive(column, true);
+                _crossColumn = column;
+            }
+            int day = column != null ? _dayColumns[column] : -1;
+            if (_rowsView != null)
+                foreach (ItemRow r in _rowsView.SourceCollection) r.CrossDay = day;
+        }
+
+        /// <summary>日期欄的格子樣式：原本的樣式（平日 / 假日）＋「選到這一天時整欄上底色」。</summary>
+        private Style DayCellStyle(int dayIndex, Style basedOn)
+        {
+            var style = new Style(typeof(DataGridCell), basedOn);
+            var cross = new DataTrigger { Binding = new Binding(nameof(ItemRow.CrossDay)), Value = dayIndex };
+            cross.Setters.Add(new Setter(BackgroundProperty, new DynamicResourceExtension("CrossBrush")));
+            style.Triggers.Add(cross);
+            // 十字交叉的那一格：選取色＋粗框（要放在最後，才會蓋過上面的整欄底色；和 XAML 的 CrossCell 一樣）
+            var selected = new Trigger { Property = DataGridCell.IsSelectedProperty, Value = true };
+            selected.Setters.Add(new Setter(BackgroundProperty, new DynamicResourceExtension("CellSelectedBrush")));
+            selected.Setters.Add(new Setter(BorderBrushProperty, new DynamicResourceExtension("AccentBrush")));
+            selected.Setters.Add(new Setter(BorderThicknessProperty, new Thickness(2)));
+            selected.Setters.Add(new Setter(PaddingProperty, new Thickness(2, 0, 2, 0)));
+            style.Triggers.Add(selected);
+            return style;
+        }
+
         // ---------- 表格欄位 ----------
 
         private static readonly string[] WeekdayNames = ["日", "一", "二", "三", "四", "五", "六"];
@@ -270,12 +319,14 @@ namespace ServiceRecord
         {
             ItemsGrid.Columns.Clear();
             _dayColumns.Clear();
+            _crossColumn = null; // 舊的欄位已經不用了
 
             ItemsGrid.Columns.Add(ReadOnlyColumn("代碼", nameof(ItemRow.Code), 74, "LeftText"));
             ItemsGrid.Columns.Add(ReadOnlyColumn("服務項目", nameof(ItemRow.Name), 196, "LeftText"));
             ItemsGrid.Columns.Add(ReadOnlyColumn("單價", nameof(ItemRow.Price), 62, "RightText"));
 
             var offDayCell = (Style)FindResource("WeekendCell");
+            var dayCell = (Style)FindResource("CrossCell");
             for (int d = 1; d <= _record.DaysInMonth; d++)
             {
                 var date = new DateOnly(_record.Year, _record.Month, d);
@@ -305,7 +356,7 @@ namespace ServiceRecord
                     Binding = new Binding($"[{d - 1}]"),
                     ElementStyle = (Style)FindResource("DayText"),
                     EditingElementStyle = (Style)FindResource("CellEditBox"),
-                    CellStyle = isOff ? offDayCell : null,
+                    CellStyle = DayCellStyle(d - 1, isOff ? offDayCell : dayCell),
                 };
                 _dayColumns[column] = d - 1;
                 ItemsGrid.Columns.Add(column);
@@ -345,7 +396,7 @@ namespace ServiceRecord
 
         private static bool IsEditingText => Keyboard.FocusedElement is TextBox;
 
-        /// <summary>沒在編輯時：+ / − 加減一次，Delete / Backspace 清除。</summary>
+        /// <summary>沒在編輯時：數字鍵開始填寫，+ / − 加減一次，Delete / Backspace 清除。</summary>
         private void ItemsGrid_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (IsEditingText) return;
@@ -353,7 +404,25 @@ namespace ServiceRecord
                 || !_dayColumns.TryGetValue(column, out var day))
                 return;
 
-            switch (e.Key)
+            // 中文輸入法（注音）開著時，按鍵會先被輸入法拿走（Key.ImeProcessed），實際的鍵在 ImeProcessedKey
+            var key = e.Key == Key.ImeProcessed ? e.ImeProcessedKey : e.Key;
+
+            // 數字鍵：自己開始編輯並填入這個數字。不靠 DataGrid 的打字開始編輯，
+            // 因為注音模式下第一個數字會被輸入法吃掉（變成注音符號或不見）
+            if (Keyboard.Modifiers == ModifierKeys.None && DigitOf(key) is { } digit)
+            {
+                e.Handled = true; // 同時讓這個鍵不再產生文字輸入，數字才不會重複
+                // 當作「打了這個數字」開始編輯：DataGrid 會把數字放進輸入框、游標放在後面（和平常打字開始編輯一樣）
+                var typed = new TextCompositionEventArgs(Keyboard.PrimaryDevice,
+                    new TextComposition(InputManager.Current, ItemsGrid, digit.ToString()))
+                {
+                    RoutedEvent = TextCompositionManager.TextInputEvent,
+                };
+                ItemsGrid.BeginEdit(typed);
+                return;
+            }
+
+            switch (key)
             {
                 case Key.Add:
                 case Key.OemPlus:
@@ -372,6 +441,13 @@ namespace ServiceRecord
                     break;
             }
         }
+
+        internal static int? DigitOf(Key key) => key switch
+        {
+            >= Key.D0 and <= Key.D9 => key - Key.D0,
+            >= Key.NumPad0 and <= Key.NumPad9 => key - Key.NumPad0,
+            _ => null,
+        };
 
         /// <summary>沒在編輯時只讓數字開始編輯，其他字（例如 + −）不要被當成輸入內容。</summary>
         private void ItemsGrid_PreviewTextInput(object sender, TextCompositionEventArgs e)

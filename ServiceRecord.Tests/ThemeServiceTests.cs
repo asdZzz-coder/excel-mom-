@@ -112,10 +112,10 @@ namespace ServiceRecord.Tests
         [InlineData("MainWindow.xaml")]
         [InlineData("SettingsWindow.xaml")]
         [InlineData("ItemEditWindow.xaml")]
-        public void WindowXaml_HasNoHardcodedColorsExceptOnGradient(string file)
+        public void WindowXaml_HasNoHardcodedColors(string file)
         {
-            // 唯一允許的固定顏色：月薪卡片（漸層底，深淺色都一樣）上的淺色文字
-            var allowed = new[] { "#E0E7FF" };
+            // 不允許寫死顏色（月薪卡片上的字用 White）
+            var allowed = Array.Empty<string>();
             var found = Regex.Matches(ReadXaml(file), "#[0-9A-Fa-f]{6}\\b").Select(m => m.Value.ToUpperInvariant());
             Assert.All(found, c => Assert.Contains(c, allowed));
         }
@@ -128,6 +128,19 @@ namespace ServiceRecord.Tests
             Assert.DoesNotMatch(@"FindResource\(""\w*Brush""\)", code);
         }
 
+        [Fact]
+        public void NumberInputs_DisableChineseInputMethod()
+        {
+            // 注音輸入法開著時，數字鍵會變成注音符號（5 → ㄓ），次數、單價、比例都打不進去
+            Assert.Contains("x:Name=\"ItemsGrid\"", ReadXaml("MainWindow.xaml"));
+            Assert.Matches(@"x:Name=""ItemsGrid""[^>]*InputMethod\.IsInputMethodEnabled=""False""", ReadXaml("MainWindow.xaml"));
+            Assert.Matches(@"x:Key=""CellEditBox""[^>]*>\s*<Setter Property=""InputMethod\.IsInputMethodEnabled"" Value=""False""/>", ReadXaml("App.xaml"));
+            Assert.Matches(@"x:Name=""PriceBox""[^>]*InputMethod\.IsInputMethodEnabled=""False""", ReadXaml("ItemEditWindow.xaml"));
+            Assert.Matches(@"x:Name=""RatioBox""[^>]*InputMethod\.IsInputMethodEnabled=""False""", ReadXaml("SettingsWindow.xaml"));
+            // 姓名、地點等文字格要能打中文
+            Assert.Matches(@"x:Key=""CellEditBoxLeft""[\s\S]*?InputMethod\.IsInputMethodEnabled"" Value=""True""", ReadXaml("App.xaml"));
+        }
+
         [Theory]
         [MemberData(nameof(XamlFiles))]
         public void Windows_ScaleWithZoom(string file)
@@ -136,31 +149,40 @@ namespace ServiceRecord.Tests
             Assert.Contains("LayoutTransform=\"{DynamicResource UiScale}\"", ReadXaml(file));
         }
 
-        // ---------- 可讀性：文字與背景的對比（WCAG） ----------
+        // ---------- 可讀性：文字與背景的對比（WCAG AAA：7:1，老花也看得清楚） ----------
+
+        /// <summary>每一種文字色，和它會出現的每一種底色。</summary>
+        public static TheoryData<string, string> TextOnBackground => new()
+        {
+            // 一般文字：卡片、視窗、輸入框、表格各種底色
+            { "TextBrush", "CardBrush" }, { "TextBrush", "AppBgBrush" }, { "TextBrush", "InputBgBrush" },
+            { "TextBrush", "AltRowBrush" }, { "TextBrush", "CellSelectedBrush" }, { "TextBrush", "WeekendBrush" },
+            { "TextBrush", "TotalBrush" }, { "TextBrush", "AccentSoftBrush" }, { "TextBrush", "HoverBrush" },
+            { "TextBrush", "GhostHoverBrush" }, { "TextBrush", "CrossBrush" }, { "TextBrush", "CrossHeaderBrush" },
+            // 灰色說明文字、星期
+            { "MutedBrush", "CardBrush" }, { "MutedBrush", "AppBgBrush" }, { "MutedBrush", "AccentSoftBrush" },
+            { "MutedBrush", "CrossHeaderBrush" },
+            // 紅字：假日日期、本月假日、刪除按鈕
+            { "DangerBrush", "CardBrush" }, { "DangerBrush", "AccentSoftBrush" }, { "DangerBrush", "DangerSoftBrush" },
+            { "DangerBrush", "CrossHeaderBrush" },
+            // 藍字：次數、實領、選到的分頁
+            { "AccentTextBrush", "CardBrush" }, { "AccentTextBrush", "AccentSoftBrush" }, { "AccentTextBrush", "TotalBrush" },
+            { "AccentTextBrush", "CrossBrush" }, { "AccentTextBrush", "CellSelectedBrush" },
+        };
 
         [Theory]
-        [InlineData("TextBrush", "CardBrush", 7.0)]
-        [InlineData("TextBrush", "AppBgBrush", 7.0)]
-        [InlineData("TextBrush", "InputBgBrush", 7.0)]
-        [InlineData("TextBrush", "AltRowBrush", 7.0)]
-        [InlineData("TextBrush", "CellSelectedBrush", 7.0)]
-        [InlineData("TextBrush", "WeekendBrush", 7.0)]
-        [InlineData("TextBrush", "TotalBrush", 7.0)]
-        [InlineData("TextBrush", "AccentSoftBrush", 7.0)]
-        [InlineData("MutedBrush", "CardBrush", 4.5)]
-        [InlineData("MutedBrush", "AppBgBrush", 4.5)]
-        [InlineData("MutedBrush", "AccentSoftBrush", 4.5)]
-        [InlineData("DangerBrush", "AccentSoftBrush", 4.5)]
-        [InlineData("DangerBrush", "DangerSoftBrush", 4.5)]
-        [InlineData("AccentTextBrush", "AccentSoftBrush", 4.5)]
-        [InlineData("AccentTextBrush", "TotalBrush", 4.5)]
-        [InlineData("AccentTextBrush", "CardBrush", 4.5)]
+        [MemberData(nameof(TextOnBackground))]
+        public void Palette_TextIsClearlyReadableInBothThemes(string fg, string bg) => AssertContrast(fg, bg, 7.0);
+
+        [Theory]
+        // 非文字：強調色線條（選取框、勾選框）、表格格線要看得出來
         [InlineData("AccentBrush", "CardBrush", 3.0)]
-        // 表格格線要看得出來（非文字，WCAG 沒規定；1.5 以上明顯可見）
         [InlineData("GridLineBrush", "CardBrush", 1.5)]
         [InlineData("GridLineBrush", "AltRowBrush", 1.5)]
         [InlineData("GridLineBrush", "WeekendBrush", 1.4)]
-        public void Palette_TextIsReadableInBothThemes(string fg, string bg, double minRatio)
+        public void Palette_LinesAreVisibleInBothThemes(string fg, string bg, double minRatio) => AssertContrast(fg, bg, minRatio);
+
+        private static void AssertContrast(string fg, string bg, double minRatio)
         {
             var p = ThemeService.Palette.ToDictionary(e => e.Key);
             foreach (var dark in new[] { false, true })
@@ -173,13 +195,16 @@ namespace ServiceRecord.Tests
         }
 
         [Fact]
-        public void WhiteTextOnAccentButton_IsReadableInBothThemes()
+        public void WhiteText_OnButtonsAndPayCard_IsClearlyReadable()
         {
-            var accent = ThemeService.Palette.Single(e => e.Key == "AccentBrush");
-            foreach (var hex in new[] { accent.Light, accent.Dark })
+            // 主要按鈕（匯出 Excel、儲存）和月薪卡片（漸層）上的白字
+            var p = ThemeService.Palette.ToDictionary(e => e.Key);
+            var g = ThemeService.Gradient;
+            foreach (var hex in new[] { p["PrimaryBrush"].Light, p["PrimaryBrush"].Dark, p["AccentHoverBrush"].Light, p["AccentHoverBrush"].Dark,
+                                        p["AccentPressedBrush"].Light, p["AccentPressedBrush"].Dark, g.Light1, g.Light2, g.Dark1, g.Dark2 })
             {
                 var ratio = Contrast(Colors.White, ThemeService.ParseColor(hex));
-                Assert.True(ratio >= 4.5, $"白字 / {hex} 對比 {ratio:F2} < 4.5");
+                Assert.True(ratio >= 7.0, $"白字 / {hex} 對比 {ratio:F2} < 7");
             }
         }
 

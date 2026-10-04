@@ -12,17 +12,18 @@
         <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
         <SolidColorBrush x:Key="CardBorderBrush" Color="#E6E8F0"/>
         <SolidColorBrush x:Key="AccentBrush" Color="#4F46E5"/>
-        <SolidColorBrush x:Key="AccentHoverBrush" Color="#4338CA"/>
-        <SolidColorBrush x:Key="AccentPressedBrush" Color="#3730A3"/>
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#4338CA"/>
+        <SolidColorBrush x:Key="AccentHoverBrush" Color="#3730A3"/>
+        <SolidColorBrush x:Key="AccentPressedBrush" Color="#312E81"/>
         <SolidColorBrush x:Key="AccentSoftBrush" Color="#EEF0FF"/>
-        <SolidColorBrush x:Key="AccentTextBrush" Color="#4F46E5"/>
+        <SolidColorBrush x:Key="AccentTextBrush" Color="#3730A3"/>
         <SolidColorBrush x:Key="TextBrush" Color="#111827"/>
-        <SolidColorBrush x:Key="MutedBrush" Color="#4B5263"/>
+        <SolidColorBrush x:Key="MutedBrush" Color="#3F4654"/>
         <SolidColorBrush x:Key="SubtleBrush" Color="#9CA3AF"/>
         <SolidColorBrush x:Key="LineBrush" Color="#E2E5EC"/>
         <SolidColorBrush x:Key="GridLineBrush" Color="#BFC5D0"/>
         <SolidColorBrush x:Key="InputBgBrush" Color="#F8F9FC"/>
-        <SolidColorBrush x:Key="DangerBrush" Color="#C81E1E"/>
+        <SolidColorBrush x:Key="DangerBrush" Color="#8B1515"/>
         <SolidColorBrush x:Key="DangerSoftBrush" Color="#FEF2F2"/>
         <SolidColorBrush x:Key="DangerHoverBrush" Color="#FEE2E2"/>
         <SolidColorBrush x:Key="DangerPressedBrush" Color="#FECACA"/>
@@ -38,10 +39,13 @@
         <SolidColorBrush x:Key="CellSelectedBrush" Color="#DCE0FF"/>
         <SolidColorBrush x:Key="WeekendBrush" Color="#FFF3F3"/>
         <SolidColorBrush x:Key="TotalBrush" Color="#F5F6FF"/>
+        <SolidColorBrush x:Key="CrossBrush" Color="#FFF0B0"/>
+        <SolidColorBrush x:Key="CrossHeaderBrush" Color="#FFE38F"/>
+        <SolidColorBrush x:Key="CrossLineBrush" Color="#D99A00"/>
 
         <LinearGradientBrush x:Key="AccentGradient" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#4F46E5" Offset="0"/>
-            <GradientStop Color="#7C3AED" Offset="1"/>
+            <GradientStop Color="#4338CA" Offset="0"/>
+            <GradientStop Color="#5B21B6" Offset="1"/>
         </LinearGradientBrush>
 
         <!-- 字體放大縮小：每個視窗最外層用 LayoutTransform="{DynamicResource UiScale}"，倍率由 Services/ZoomService.cs 設定 -->
@@ -175,7 +179,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{DynamicResource AccentBrush}" CornerRadius="10"
+                        <Border x:Name="Bd" Background="{DynamicResource PrimaryBrush}" CornerRadius="10"
                                 Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -660,7 +664,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="DataGridCell">
-                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
                             <ContentPresenter VerticalAlignment="Center"/>
                         </Border>
                     </ControlTemplate>
@@ -675,7 +680,9 @@
         </Style>
 
         <!-- 表格內編輯中的輸入框：不要圓角大框，貼齊格子 -->
+        <!-- 數字格（次數、單價）：關掉中文輸入法，注音模式下按數字鍵也是數字，不會變成注音符號 -->
         <Style x:Key="CellEditBox" TargetType="TextBox">
+            <Setter Property="InputMethod.IsInputMethodEnabled" Value="False"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
@@ -692,8 +699,10 @@
             </Setter>
         </Style>
 
+        <!-- 文字格（姓名、地點、代碼、名稱）：可以打中文 -->
         <Style x:Key="CellEditBoxLeft" TargetType="TextBox" BasedOn="{StaticResource CellEditBox}">
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="InputMethod.IsInputMethodEnabled" Value="True"/>
         </Style>
 
     </Application.Resources>

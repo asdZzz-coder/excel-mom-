@@ -95,7 +95,7 @@
                     <TextBlock x:Name="FileNamePreview" Foreground="{DynamicResource MutedBrush}" FontSize="14" Margin="2,6,0,20" TextWrapping="Wrap"/>
 
                     <TextBlock Text="實領比例" Style="{StaticResource FieldLabel}"/>
-                    <TextBox x:Name="RatioBox" Width="120" HorizontalAlignment="Left"/>
+                    <TextBox x:Name="RatioBox" Width="120" HorizontalAlignment="Left" InputMethod.IsInputMethodEnabled="False"/>
                     <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="14" Margin="2,6,0,0" TextWrapping="Wrap"
                                Text="實領 = 金額小計 × 比例。原本的 Excel 是 0.6（六成）。"/>
                 </StackPanel>

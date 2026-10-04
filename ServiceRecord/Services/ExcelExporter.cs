@@ -22,7 +22,7 @@ namespace ServiceRecord.Services
         public const int AmountCol = CountCol + 1;                     // AJ
 
         private static readonly XLColor WeekendFill = XLColor.FromHtml("#FDECEC");
-        private static readonly XLColor HolidayFont = XLColor.FromHtml("#C81E1E");
+        private static readonly XLColor HolidayFont = XLColor.FromHtml("#8B1515");
         private static readonly XLColor HeaderFill = XLColor.FromHtml("#EEF0FF");
         private static readonly XLColor TotalFill = XLColor.FromHtml("#FFF7D6");
 

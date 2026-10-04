@@ -31,7 +31,7 @@
             </StackPanel>
             <StackPanel Grid.Column="4">
                 <TextBlock Text="單價" Style="{StaticResource FieldLabel}"/>
-                <TextBox x:Name="PriceBox"/>
+                <TextBox x:Name="PriceBox" InputMethod.IsInputMethodEnabled="False"/>
             </StackPanel>
         </Grid>
 

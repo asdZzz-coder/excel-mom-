@@ -1,6 +1,7 @@
 <Window x:Class="ServiceRecord.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:ServiceRecord"
         Title="居服紀錄表" Width="1560" Height="900" MinWidth="900" MinHeight="560"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource AppBgBrush}"
@@ -39,11 +40,37 @@
             <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}"/>
         </Style>
 
-        <Style x:Key="WeekendCell" TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+        <!-- 十字標示：選到某一格時，同一列（服務項目）和同一欄（日期）上淡黃底色 -->
+        <Style x:Key="CrossCell" TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+            <Style.Triggers>
+                <!-- 整欄（日期）的底色在程式裡每個日期欄各加一個觸發條件（ItemRow.CrossDay = 這一天） -->
+                <DataTrigger Binding="{Binding IsCrossRow}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource CrossBrush}"/>
+                </DataTrigger>
+                <!-- 十字交叉的那一格：選取色＋粗框（放最後才會蓋過上面的底色） -->
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource CellSelectedBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                    <Setter Property="BorderThickness" Value="2"/>
+                    <Setter Property="Padding" Value="2,0"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="WeekendCell" TargetType="DataGridCell" BasedOn="{StaticResource CrossCell}">
             <Setter Property="Background" Value="{DynamicResource WeekendBrush}"/>
         </Style>
-        <Style x:Key="TotalCell" TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+        <Style x:Key="TotalCell" TargetType="DataGridCell" BasedOn="{StaticResource CrossCell}">
             <Setter Property="Background" Value="{DynamicResource TotalBrush}"/>
+        </Style>
+        <!-- 十字標示的日期標題：較深的黃底＋底線 -->
+        <Style x:Key="CrossHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Column.(local:CrossHair.IsActive), RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource CrossHeaderBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource CrossLineBrush}"/>
+                    <Setter Property="BorderThickness" Value="0,0,1,3"/>
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
     </Window.Resources>
 
@@ -133,10 +160,10 @@
 
                     <Border Grid.Row="2" Background="{DynamicResource AccentGradient}" CornerRadius="12" Padding="14,12" Margin="0,10,0,0">
                         <StackPanel>
-                            <TextBlock Text="本月月薪" Foreground="#E0E7FF" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock Text="本月月薪" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
                             <TextBlock x:Name="MonthlyPayText" Text="0" Foreground="White" FontFamily="{StaticResource DisplayFont}"
                                        FontSize="32" FontWeight="Bold" Margin="0,2,0,0"/>
-                            <TextBlock x:Name="RatioHintText" Foreground="#E0E7FF" FontSize="13" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                            <TextBlock x:Name="RatioHintText" Foreground="White" FontSize="13" Margin="0,2,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -167,6 +194,8 @@
                     </Grid>
 
                     <DataGrid x:Name="ItemsGrid" Grid.Row="1" FrozenColumnCount="3"
+                              CellStyle="{StaticResource CrossCell}" ColumnHeaderStyle="{StaticResource CrossHeader}"
+                              CurrentCellChanged="ItemsGrid_CurrentCellChanged" InputMethod.IsInputMethodEnabled="False"
                               PreviewKeyDown="ItemsGrid_PreviewKeyDown" PreviewTextInput="ItemsGrid_PreviewTextInput"
                               VirtualizingPanel.IsVirtualizing="True"/>
 

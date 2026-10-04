@@ -38,17 +38,18 @@ namespace ServiceRecord.Services
             ("CardBrush",               "#FFFFFF", "#1B1E25"),
             ("CardBorderBrush",         "#E6E8F0", "#2A2E38"),
             ("AccentBrush",             "#4F46E5", "#5B5FEF"),
-            ("AccentHoverBrush",        "#4338CA", "#7477F4"),
-            ("AccentPressedBrush",      "#3730A3", "#5155E8"),
+            ("PrimaryBrush",            "#4338CA", "#4338CA"), // 主要按鈕底色（白字 7:1 以上）
+            ("AccentHoverBrush",        "#3730A3", "#3730A3"),
+            ("AccentPressedBrush",      "#312E81", "#312E81"),
             ("AccentSoftBrush",         "#EEF0FF", "#272B4A"),
-            ("AccentTextBrush",         "#4F46E5", "#A5B4FC"),
+            ("AccentTextBrush",         "#3730A3", "#B4C0FD"),
             ("TextBrush",               "#111827", "#E6E8EE"),
-            ("MutedBrush",              "#4B5263", "#B8BECA"),
+            ("MutedBrush",              "#3F4654", "#B8BECA"),
             ("SubtleBrush",             "#9CA3AF", "#717887"),
             ("LineBrush",               "#E2E5EC", "#30343F"),
             ("GridLineBrush",           "#BFC5D0", "#454B59"), // 表格格線：比一般分隔線深，格子才分得清楚
             ("InputBgBrush",            "#F8F9FC", "#15181E"),
-            ("DangerBrush",             "#C81E1E", "#F87171"),
+            ("DangerBrush",             "#8B1515", "#FCA5A5"),
             ("DangerSoftBrush",         "#FEF2F2", "#2C1B1F"),
             ("DangerHoverBrush",        "#FEE2E2", "#3A2026"),
             ("DangerPressedBrush",      "#FECACA", "#4A252C"),
@@ -62,14 +63,18 @@ namespace ServiceRecord.Services
             ("ScrollThumbPressedBrush", "#6B7280", "#6B7280"),
             // 服務紀錄表格
             ("AltRowBrush",             "#FAFBFD", "#1F222A"),
-            ("CellSelectedBrush",       "#DCE0FF", "#363B6E"),
+            ("CellSelectedBrush",       "#DCE0FF", "#252A55"),
             ("WeekendBrush",            "#FFF3F3", "#2A1D22"),
             ("TotalBrush",              "#F5F6FF", "#212439"),
+            // 十字標示（選到的格子所在的列和日期欄）
+            ("CrossBrush",              "#FFF0B0", "#3A3418"),
+            ("CrossHeaderBrush",        "#FFE38F", "#2F280E"),
+            ("CrossLineBrush",          "#D99A00", "#D4A72C"),
         };
 
         /// <summary>月薪卡片的漸層（左上 → 右下）。</summary>
         internal static readonly (string Light1, string Light2, string Dark1, string Dark2) Gradient =
-            ("#4F46E5", "#7C3AED", "#4F46E5", "#7C3AED");
+            ("#4338CA", "#5B21B6", "#4338CA", "#5B21B6");
 
         // ---------- 讀取 / 儲存 ----------
 

@@ -62,12 +62,49 @@ namespace ServiceRecord
             _changed();
         }
 
+        private bool _isCrossRow;
+        /// <summary>十字標示：目前選到的格子在這一列，整列（服務項目）上底色。</summary>
+        public bool IsCrossRow
+        {
+            get => _isCrossRow;
+            set
+            {
+                if (_isCrossRow == value) return;
+                _isCrossRow = value;
+                Raise(nameof(IsCrossRow));
+            }
+        }
+
+        private int _crossDay = -1;
+        /// <summary>十字標示：目前選到的是哪一天（0 是 1 號，-1 表示沒有選日期）。每一列都一樣，日期欄的格子依此上底色。</summary>
+        public int CrossDay
+        {
+            get => _crossDay;
+            set
+            {
+                if (_crossDay == value) return;
+                _crossDay = value;
+                Raise(nameof(CrossDay));
+            }
+        }
+
         public int Count => _record.CountOf(_clientId, Service.Code);
         public string CountText => Count == 0 ? "" : Count.ToString();
         public string AmountText => Count == 0 ? "" : (Count * Price).ToString("#,##0");
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void Raise(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    /// <summary>十字標示：目前選到的格子在哪一欄（日期）。附加在 DataGridColumn 上，格子和欄標題的樣式依此上底色。</summary>
+    public static class CrossHair
+    {
+        public static readonly System.Windows.DependencyProperty IsActiveProperty =
+            System.Windows.DependencyProperty.RegisterAttached("IsActive", typeof(bool), typeof(CrossHair),
+                new System.Windows.PropertyMetadata(false));
+
+        public static bool GetIsActive(System.Windows.DependencyObject d) => (bool)d.GetValue(IsActiveProperty);
+        public static void SetIsActive(System.Windows.DependencyObject d, bool value) => d.SetValue(IsActiveProperty, value);
     }
 
     /// <summary>左側個案清單的一列：名稱 + 本月實領。</summary>
