@@ -114,6 +114,8 @@ namespace ServiceRecord
 
         public Client Client { get; }
         public string Label => Client.Label;
+        /// <summary>代班個案的說明（替誰代班、備註）；正常個案是空字串。</summary>
+        public string Info => Client.SubstituteInfo;
 
         private string _netPay = "";
         public string NetPayText

@@ -10,6 +10,10 @@ namespace ServiceRecord.Services
     {
         public string Name { get; set; } = "";
         public string Location { get; set; } = "";
+        /// <summary>代班個案（工作表名稱是「代班(姓名)」，或 D2 寫著「代班」）。</summary>
+        public bool IsSubstitute { get; set; }
+        public string CoverFor { get; set; } = "";
+        public string Note { get; set; } = "";
         public Dictionary<string, int[]> Counts { get; } = new();
     }
 
@@ -76,7 +80,10 @@ namespace ServiceRecord.Services
             }
             if (dateRow == 0) return null;
 
-            var client = new ImportedClient { Name = ClientNameFromSheet(ws.Name) };
+            var sheetName = ws.Name.Trim();
+            var client = new ImportedClient { IsSubstitute = sheetName.StartsWith(ExcelExporter.SubstitutePrefix) };
+            if (client.IsSubstitute) sheetName = sheetName[ExcelExporter.SubstitutePrefix.Length..];
+            client.Name = ClientNameFromSheet(sheetName);
             var items = new List<ServiceItem>();
             for (int r = dateRow + 1; r <= lastRow; r++)
             {
@@ -119,6 +126,16 @@ namespace ServiceRecord.Services
                 }
             }
 
+            // 代班：表頭寫著「代班」「原居服員：…」「備註：…」（本程式匯出的代班工作表）
+            for (int r = 2; r < dateRow; r++)
+                for (int c = FirstDayCol; c <= AmountCol; c++)
+                {
+                    var text = ValueOf(ws.Cell(r, c)).ToString(CultureInfo.InvariantCulture).Trim();
+                    if (c == FirstDayCol && text == ExcelExporter.SubstituteMark) client.IsSubstitute = true;
+                    else if (text.StartsWith(ExcelExporter.CoverForLabel)) client.CoverFor = text[ExcelExporter.CoverForLabel.Length..].Trim();
+                    else if (text.StartsWith(ExcelExporter.NoteLabel)) client.Note = text[ExcelExporter.NoteLabel.Length..].Trim();
+                }
+
             // 比例：合計列的公式 (SUM(AJ5:AJ35)*0.6)
             decimal? ratio = null;
             for (int r = dateRow; r <= lastRow + 2 && ratio == null; r++)
@@ -135,7 +152,8 @@ namespace ServiceRecord.Services
 
         /// <summary>
         /// 把匯入的內容變成本程式的月份紀錄：個案依姓名對到設定裡的個案，設定裡沒有的會新增到設定。
-        /// 回傳新增了幾位個案。
+        /// 代班個案不加到設定的個案名單，只放進這個月的代班，並記在「代過班的個案」裡（同名的沿用原本的 Id）。
+        /// 回傳新增了幾位（正常）個案。
         /// </summary>
         public static (MonthRecord Record, int AddedClients) ToMonthRecord(ImportedMonth imported, AppSettings settings)
         {
@@ -147,7 +165,25 @@ namespace ServiceRecord.Services
                 Items = imported.Items.Select(i => i.Clone()).ToList(),
             };
             int added = 0;
-            foreach (var ic in imported.Clients)
+            foreach (var ic in imported.Clients.Where(c => c.IsSubstitute))
+            {
+                var known = settings.SubstituteHistory.FirstOrDefault(c => c.Name.Trim() == ic.Name);
+                var sub = new Client
+                {
+                    Id = known?.Id ?? Guid.NewGuid().ToString("N"),
+                    Name = ic.Name,
+                    Location = ic.Location.Length > 0 ? ic.Location : known?.Location ?? "",
+                    CoverFor = ic.CoverFor.Length > 0 ? ic.CoverFor : known?.CoverFor ?? "",
+                    Note = ic.Note,
+                };
+                if (record.Substitutes.Any(c => c.Id == sub.Id)) continue; // 同一個人出現兩張表，只取第一張
+                settings.RememberSubstitute(sub);
+                record.Substitutes.Add(sub);
+                foreach (var (code, days) in ic.Counts)
+                    Array.Copy(days, record.GetDays(sub.Id, code), MonthRecord.MaxDays);
+            }
+
+            foreach (var ic in imported.Clients.Where(c => !c.IsSubstitute))
             {
                 var client = settings.Clients.FirstOrDefault(c => c.Name.Trim() == ic.Name);
                 if (client == null)

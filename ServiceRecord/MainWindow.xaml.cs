@@ -26,6 +26,7 @@ namespace ServiceRecord
         private bool _saved;
         private string? _selectedClientId;
         private readonly List<ClientRow> _clientRows = new();
+        private readonly List<ClientRow> _substituteRows = new();
         private ListCollectionView? _rowsView;
         /// <summary>日期欄 → 第幾天（0 是 1 號）。</summary>
         private readonly Dictionary<DataGridColumn, int> _dayColumns = new();
@@ -152,36 +153,75 @@ namespace ServiceRecord
 
             _clientRows.Clear();
             _clientRows.AddRange(record.Clients.Select(c => new ClientRow(c)));
+            _substituteRows.Clear();
+            _substituteRows.AddRange(record.Substitutes.Select(c => new ClientRow(c)));
+            _switchingList = true;
             ClientList.ItemsSource = null;
             ClientList.ItemsSource = _clientRows;
-
-            bool hasClients = _clientRows.Count > 0;
-            NoClientHint.Visibility = hasClients ? Visibility.Collapsed : Visibility.Visible;
-            AddItemButton.IsEnabled = hasClients;
-            UsedOnlyBox.IsEnabled = hasClients;
+            SubstituteList.ItemsSource = null;
+            SubstituteList.ItemsSource = _substituteRows;
+            _switchingList = false;
+            UpdateClientListState();
 
             BuildColumns();
             UpdateHolidayText();
             _ = HolidayService.RefreshAsync(record.Year); // 背景下載這一年最新的官方日曆，有變動會重畫
-            ClientList.SelectedItem = _clientRows.FirstOrDefault(r => r.Client.Id == _selectedClientId) ?? _clientRows.FirstOrDefault();
-            if (!hasClients) ShowClient(null);
+            SelectClient(_selectedClientId);
             RefreshTotals();
         }
 
-        // ---------- 個案 ----------
+        // ---------- 個案（正常個案和代班個案分兩個清單，同時只會選到一位） ----------
+
+        private bool AnyClients => _clientRows.Count + _substituteRows.Count > 0;
+
+        private void UpdateClientListState()
+        {
+            NoClientHint.Visibility = _clientRows.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
+            NoClientHint.Text = _substituteRows.Count > 0
+                ? "這個月沒有正常個案（只有代班）。\n\n要新增個案請按右上角「設定」。"
+                : "這個月還沒有個案。\n\n按右上角「設定」新增個案，或用「匯入 Excel」讀入原本的服務紀錄表。";
+            NoSubstituteHint.Visibility = _substituteRows.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
+            SubstituteList.Visibility = _substituteRows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            AddItemButton.IsEnabled = AnyClients;
+            UsedOnlyBox.IsEnabled = AnyClients;
+        }
+
+        /// <summary>選某一位（正常或代班）；找不到就選第一位正常個案，沒有的話選第一位代班。</summary>
+        private void SelectClient(string? clientId)
+        {
+            var row = _clientRows.Concat(_substituteRows).FirstOrDefault(r => r.Client.Id == clientId)
+                      ?? _clientRows.FirstOrDefault() ?? _substituteRows.FirstOrDefault();
+            _switchingList = true;
+            ClientList.SelectedItem = _clientRows.Contains(row!) ? row : null;
+            SubstituteList.SelectedItem = _substituteRows.Contains(row!) ? row : null;
+            _switchingList = false;
+            CommitEdits();
+            _selectedClientId = row?.Client.Id;
+            ShowClient(row?.Client);
+        }
+
+        private bool _switchingList;
 
         private void ClientList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (ClientList.SelectedItem is ClientRow row)
-            {
-                CommitEdits();
-                _selectedClientId = row.Client.Id;
-                ShowClient(row.Client);
-            }
+            if (_switchingList || sender is not ListBox list || list.SelectedItem is not ClientRow row) return;
+            // 選了一邊，另一邊取消選取
+            _switchingList = true;
+            (list == ClientList ? SubstituteList : ClientList).SelectedItem = null;
+            _switchingList = false;
+            CommitEdits();
+            _selectedClientId = row.Client.Id;
+            ShowClient(row.Client);
         }
 
         private void ShowClient(Client? client)
         {
+            bool substitute = client != null && _record.IsSubstitute(client.Id);
+            SubstituteBadge.Visibility = substitute ? Visibility.Visible : Visibility.Collapsed;
+            SubstituteActions.Visibility = substitute ? Visibility.Visible : Visibility.Collapsed;
+            SubstituteInfoText.Text = substitute ? client!.SubstituteInfo : "";
+            SubstituteInfoText.Visibility = SubstituteInfoText.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+
             if (client == null)
             {
                 ClientTitle.Text = "";
@@ -201,7 +241,7 @@ namespace ServiceRecord
             RefreshTotals();
         }
 
-        private Client? SelectedClient => (ClientList.SelectedItem as ClientRow)?.Client;
+        private Client? SelectedClient => ((ClientList.SelectedItem ?? SubstituteList.SelectedItem) as ClientRow)?.Client;
 
         private void UsedOnly_Changed(object sender, RoutedEventArgs e)
         {
@@ -218,7 +258,7 @@ namespace ServiceRecord
 
         private void UpdateGridHint()
         {
-            if (_clientRows.Count == 0)
+            if (!AnyClients)
             {
                 NoDataHint.Text = "還沒有個案。請按右上角「設定」新增個案，或用「匯入 Excel」讀入原本的服務紀錄表。";
                 NoDataHint.Visibility = Visibility.Visible;
@@ -469,10 +509,14 @@ namespace ServiceRecord
 
         private void RefreshTotals()
         {
-            foreach (var row in _clientRows)
+            foreach (var row in _clientRows.Concat(_substituteRows))
                 row.NetPayText = PayCalculator.Money(PayCalculator.NetPay(_record, row.Client.Id));
 
             MonthlyPayText.Text = PayCalculator.Money(PayCalculator.MonthlyPay(_record));
+            // 有代班時，月薪下面分開列「個案合計」「代班合計」
+            PayBreakdown.Visibility = _record.Substitutes.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            RegularPayText.Text = PayCalculator.Money(PayCalculator.RegularPay(_record));
+            SubstitutePayText.Text = PayCalculator.Money(PayCalculator.SubstitutePay(_record));
             var ratio = _record.ShareRatio.ToString("0.###");
             RatioHintText.Text = $"每位個案金額 × {ratio} 後加總";
             RatioText.Text = $"× {ratio}";
@@ -550,6 +594,58 @@ namespace ServiceRecord
             ShowClient(SelectedClient);
         }
 
+        // ---------- 代班：新增 / 修改 / 刪除（只影響這個月） ----------
+
+        private void AddSubstitute_Click(object sender, RoutedEventArgs e)
+        {
+            CommitEdits();
+            var dlg = new SubstituteWindow(_record, _settings) { Owner = this };
+            if (dlg.ShowDialog() != true || dlg.Result == null) return;
+
+            _record.AddSubstitute(dlg.Result);
+            _settings.RememberSubstitute(dlg.Result); // 下次新增代班可以直接挑
+            SaveSettings();
+            SaveMonth();
+            _selectedClientId = dlg.Result.Id;
+            ShowRecord(_record, saved: true);
+        }
+
+        private void EditSubstitute_Click(object sender, RoutedEventArgs e)
+        {
+            if (SelectedClient is not { } client || !_record.IsSubstitute(client.Id)) return;
+            CommitEdits();
+            var dlg = new SubstituteWindow(_record, _settings, client) { Owner = this };
+            if (dlg.ShowDialog() != true || dlg.Result == null) return;
+
+            client.Name = dlg.Result.Name;
+            client.Location = dlg.Result.Location;
+            client.CoverFor = dlg.Result.CoverFor;
+            client.Note = dlg.Result.Note;
+            _settings.RememberSubstitute(client);
+            SaveSettings();
+            SaveMonth();
+            ShowRecord(_record, saved: true);
+        }
+
+        private void DeleteSubstitute_Click(object sender, RoutedEventArgs e)
+        {
+            if (SelectedClient is not { } client || !_record.IsSubstitute(client.Id)) return;
+            CommitEdits();
+
+            int total = _record.TotalCountOfClient(client.Id);
+            var message = total > 0
+                ? $"代班個案「{client.Label}」這個月已經填了 {total} 次（實領 {PayCalculator.Money(PayCalculator.NetPay(_record, client.Id))}）。\n\n刪除後這些次數也會一起刪掉，確定要從 {MonthLabel} 刪除嗎？"
+                : $"要從 {MonthLabel} 刪除代班個案「{client.Label}」嗎？";
+            var answer = MessageBox.Show(message, "刪除代班", MessageBoxButton.YesNo,
+                total > 0 ? MessageBoxImage.Warning : MessageBoxImage.Question, MessageBoxResult.No);
+            if (answer != MessageBoxResult.Yes) return;
+
+            _record.RemoveSubstitute(client.Id);
+            SaveMonth();
+            _selectedClientId = null;
+            ShowRecord(_record, saved: true);
+        }
+
         // ---------- 設定 ----------
 
         private void Settings_Click(object sender, RoutedEventArgs e)
@@ -621,14 +717,15 @@ namespace ServiceRecord
             }
 
             var (record, added) = ExcelImporter.ToMonthRecord(imported, _settings);
-            if (added > 0) SaveSettings();
+            if (added > 0 || record.Substitutes.Count > 0) SaveSettings(); // 新個案、代過班的個案
             _record = record;
             SaveMonth();
             _selectedClientId = null;
             ShowRecord(record, saved: true);
 
             MessageBox.Show(
-                $"已匯入 {MonthLabel}，共 {record.Clients.Count} 位個案。" +
+                $"已匯入 {MonthLabel}，共 {record.Clients.Count} 位個案" +
+                (record.Substitutes.Count > 0 ? $"、{record.Substitutes.Count} 位代班個案。" : "。") +
                 (added > 0 ? $"\n新增了 {added} 位個案到設定。" : "") +
                 $"\n\n本月月薪：{PayCalculator.Money(PayCalculator.MonthlyPay(record))}",
                 "匯入 Excel", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -637,7 +734,7 @@ namespace ServiceRecord
         private void Export_Click(object sender, RoutedEventArgs e)
         {
             CommitEdits();
-            if (_record.Clients.Count == 0)
+            if (!_record.AllClients.Any())
             {
                 MessageBox.Show("這個月還沒有個案，沒有東西可以匯出。", "匯出 Excel");
                 return;

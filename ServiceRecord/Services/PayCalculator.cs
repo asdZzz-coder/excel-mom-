@@ -6,7 +6,7 @@ namespace ServiceRecord.Services
     /// 跟原本 Excel 一樣的算法：
     ///   每項金額 = 次數 × 單價（AJ = AI*C）
     ///   實領     = 金額小計 × 比例（SUM(AJ)*0.6）
-    ///   月薪     = 所有個案的實領加總
+    ///   月薪     = 所有個案的實領加總 = 正常個案合計 + 代班合計
     /// </summary>
     public static class PayCalculator
     {
@@ -19,8 +19,16 @@ namespace ServiceRecord.Services
         public static decimal NetPay(MonthRecord record, string clientId) =>
             Subtotal(record, clientId) * record.ShareRatio;
 
-        public static decimal MonthlyPay(MonthRecord record) =>
+        /// <summary>正常個案的實領加總。</summary>
+        public static decimal RegularPay(MonthRecord record) =>
             record.Clients.Sum(c => NetPay(record, c.Id));
+
+        /// <summary>代班個案的實領加總。</summary>
+        public static decimal SubstitutePay(MonthRecord record) =>
+            record.Substitutes.Sum(c => NetPay(record, c.Id));
+
+        public static decimal MonthlyPay(MonthRecord record) =>
+            RegularPay(record) + SubstitutePay(record);
 
         /// <summary>金額顯示：整數不帶小數，有小數時最多兩位。</summary>
         public static string Money(decimal value) => value.ToString("#,##0.##");

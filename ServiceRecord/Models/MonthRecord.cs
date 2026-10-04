@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace ServiceRecord.Models
 {
     /// <summary>
@@ -13,6 +15,13 @@ namespace ServiceRecord.Models
         public int Month { get; set; }
         public decimal ShareRatio { get; set; } = AppSettings.DefaultShareRatio;
         public List<Client> Clients { get; set; } = new();
+
+        /// <summary>
+        /// 這個月的代班個案：跟正常個案分開，只屬於這個月（不在設定的個案名單裡，新月份也不會帶過去，
+        /// 套用設定也不會動到）。次數一樣記在 Counts，用各自的 Id。
+        /// </summary>
+        public List<Client> Substitutes { get; set; } = new();
+
         public List<ServiceItem> Items { get; set; } = new();
         public Dictionary<string, Dictionary<string, int[]>> Counts { get; set; } = new();
 
@@ -53,13 +62,20 @@ namespace ServiceRecord.Models
                 ? days.Take(DaysInMonth).Sum()
                 : 0;
 
-        /// <summary>某項目本月所有個案加起來的次數。</summary>
-        public int TotalCountOf(string code) => Clients.Sum(c => CountOf(c.Id, code));
+        /// <summary>正常個案在前、代班個案在後（匯出、算月薪時用）。</summary>
+        [JsonIgnore]
+        public IEnumerable<Client> AllClients => Clients.Concat(Substitutes);
+
+        public bool IsSubstitute(string clientId) => Substitutes.Any(c => c.Id == clientId);
+
+        /// <summary>某項目本月所有個案（含代班）加起來的次數。</summary>
+        public int TotalCountOf(string code) => AllClients.Sum(c => CountOf(c.Id, code));
 
         /// <summary>某個案本月所有項目加起來的次數。</summary>
         public int TotalCountOfClient(string clientId) => Items.Sum(i => CountOf(clientId, i.Code));
 
-        public bool HasAnyCounts => Clients.Any(c => TotalCountOfClient(c.Id) > 0);
+        [JsonIgnore]
+        public bool HasAnyCounts => AllClients.Any(c => TotalCountOfClient(c.Id) > 0);
 
         // ---------- 新增 / 刪除 ----------
 
@@ -81,6 +97,21 @@ namespace ServiceRecord.Models
         public void RemoveClient(string clientId)
         {
             Clients.RemoveAll(c => c.Id == clientId);
+            Counts.Remove(clientId);
+        }
+
+        // ---------- 代班 ----------
+
+        public void AddSubstitute(Client client)
+        {
+            if (Substitutes.Any(c => c.Id == client.Id)) throw new InvalidOperationException($"本月已經有代班個案 {client.Label}。");
+            Substitutes.Add(client.Clone());
+        }
+
+        /// <summary>刪除這個月的某位代班個案，連同他的次數。</summary>
+        public void RemoveSubstitute(string clientId)
+        {
+            Substitutes.RemoveAll(c => c.Id == clientId);
             Counts.Remove(clientId);
         }
 

@@ -138,6 +138,8 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <TextBlock Text="個案" Style="{StaticResource FieldLabel}" Margin="6,2,0,8"/>
                     <ListBox x:Name="ClientList" Grid.Row="1" Style="{StaticResource EntryListStyle}"
@@ -158,11 +160,74 @@
                                FontSize="15" Margin="6,4" Visibility="Collapsed"
                                Text="這個月還沒有個案。&#x0a;&#x0a;按右上角「設定」新增個案，或用「匯入 Excel」讀入原本的服務紀錄表。"/>
 
-                    <Border Grid.Row="2" Background="{DynamicResource AccentGradient}" CornerRadius="12" Padding="14,12" Margin="0,10,0,0">
+                    <!-- 代班：跟正常個案分開，只屬於這個月 -->
+                    <Grid Grid.Row="2" Margin="0,10,0,6">
+                        <Border Height="1" Background="{DynamicResource LineBrush}" VerticalAlignment="Top" Margin="0,0,0,0"/>
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="代班" Style="{StaticResource FieldLabel}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            <Button x:Name="AddSubstituteButton" Grid.Column="1" Click="AddSubstitute_Click" Padding="10,5" FontSize="14"
+                                    AutomationProperties.Name="新增代班" ToolTip="加一位這個月的代班個案（不會加到設定的個案名單）">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Icon}" Text="&#xE710;" FontSize="13" Margin="0,0,6,0"/>
+                                    <TextBlock Text="新增代班"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Grid>
+                    <ListBox x:Name="SubstituteList" Grid.Row="3" Style="{StaticResource EntryListStyle}" MaxHeight="230"
+                             SelectionChanged="ClientList_SelectionChanged" AutomationProperties.Name="代班個案">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="4,0,0,0">
+                                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Info}" FontSize="14" Foreground="{DynamicResource MutedBrush}" Margin="0,2,0,0"
+                                               TextTrimming="CharacterEllipsis" ToolTip="{Binding Info}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Info}" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock FontSize="14" Foreground="{DynamicResource MutedBrush}" Margin="0,2,0,0">
+                                        <Run Text="實領"/>
+                                        <Run Text="{Binding NetPayText, Mode=OneWay}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <TextBlock x:Name="NoSubstituteHint" Grid.Row="3" Text="這個月沒有代班。" FontSize="14"
+                               Foreground="{DynamicResource MutedBrush}" Margin="6,0,6,4"/>
+
+                    <Border Grid.Row="4" Background="{DynamicResource AccentGradient}" CornerRadius="12" Padding="14,12" Margin="0,10,0,0">
                         <StackPanel>
                             <TextBlock Text="本月月薪" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
                             <TextBlock x:Name="MonthlyPayText" Text="0" Foreground="White" FontFamily="{StaticResource DisplayFont}"
                                        FontSize="32" FontWeight="Bold" Margin="0,2,0,0"/>
+                            <!-- 有代班時分開列出：個案合計、代班合計 -->
+                            <Grid x:Name="PayBreakdown" Margin="0,4,0,2" Visibility="Collapsed">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="個案合計" Foreground="White" FontSize="15"/>
+                                <TextBlock x:Name="RegularPayText" Grid.Column="1" Text="0" Foreground="White" FontSize="15" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="1" Text="代班合計" Foreground="White" FontSize="15" Margin="0,2,0,0"/>
+                                <TextBlock x:Name="SubstitutePayText" Grid.Row="1" Grid.Column="1" Text="0" Foreground="White" FontSize="15"
+                                           FontWeight="SemiBold" Margin="0,2,0,0"/>
+                            </Grid>
                             <TextBlock x:Name="RatioHintText" Foreground="White" FontSize="13" Margin="0,2,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
@@ -181,15 +246,42 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel>
-                            <TextBlock x:Name="ClientTitle" FontSize="21" FontWeight="SemiBold" FontFamily="{StaticResource DisplayFont}"/>
+                            <StackPanel Orientation="Horizontal">
+                                <!-- 代班個案：標題前面加「代班」標籤 -->
+                                <Border x:Name="SubstituteBadge" Background="{DynamicResource AccentSoftBrush}" CornerRadius="6" Padding="8,2"
+                                        Margin="0,0,10,0" VerticalAlignment="Center" Visibility="Collapsed">
+                                    <TextBlock Text="代班" Foreground="{DynamicResource AccentTextBrush}" FontWeight="Bold" FontSize="16"/>
+                                </Border>
+                                <TextBlock x:Name="ClientTitle" FontSize="21" FontWeight="SemiBold" FontFamily="{StaticResource DisplayFont}"/>
+                            </StackPanel>
+                            <TextBlock x:Name="SubstituteInfoText" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource AccentTextBrush}"
+                                       Margin="0,3,0,0" TextWrapping="Wrap" Visibility="Collapsed"/>
                             <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="14" Margin="0,3,0,0"
                                        Text="點格子直接打數字，Enter 往下一格；選好格子按 + / − 加減一次，Delete 清除。"/>
                             <TextBlock x:Name="HolidayText" Foreground="{DynamicResource DangerBrush}" FontSize="14" FontWeight="SemiBold"
                                        Margin="0,4,0,0" TextWrapping="Wrap" Visibility="Collapsed"/>
                         </StackPanel>
-                        <CheckBox x:Name="UsedOnlyBox" Grid.Column="1" Content="只顯示有次數的項目" VerticalAlignment="Center"
+                        <StackPanel x:Name="SubstituteActions" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
+                                    Margin="0,0,16,0" Visibility="Collapsed">
+                            <Button Click="EditSubstitute_Click" Padding="10,5" FontSize="14" Margin="0,0,8,0"
+                                    AutomationProperties.Name="修改代班" ToolTip="修改這位代班個案的姓名、地點、原居服員、備註">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Icon}" Text="&#xE70F;" FontSize="13" Margin="0,0,6,0"/>
+                                    <TextBlock Text="修改代班"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource DangerButton}" Click="DeleteSubstitute_Click" Padding="10,5" FontSize="14"
+                                    AutomationProperties.Name="刪除代班" ToolTip="從這個月刪除這位代班個案">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Icon}" Text="&#xE74D;" FontSize="13" Margin="0,0,6,0"/>
+                                    <TextBlock Text="刪除代班"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                        <CheckBox x:Name="UsedOnlyBox" Grid.Column="2" Content="只顯示有次數的項目" VerticalAlignment="Center"
                                   Checked="UsedOnly_Changed" Unchecked="UsedOnly_Changed"/>
                     </Grid>
 

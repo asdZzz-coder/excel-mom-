@@ -302,6 +302,154 @@ namespace ServiceRecord.Tests
             Assert.Equal(0, remove.TotalCountOfClient(remove.Clients[0].Id));
         }
 
+        // ---------- 代班 ----------
+
+        /// <summary>Sample() 再加一位代班個案「丙」：替王小明代班，3 日 BA13 2 次、4 日 BA01 1 次。</summary>
+        private static MonthRecord SampleWithSubstitute(AppSettings? settings = null)
+        {
+            var record = Sample();
+            var sub = new Client { Name = "丙", Location = "裕善街", CoverFor = "王小明", Note = "6/3～6/5" };
+            record.AddSubstitute(sub);
+            settings?.RememberSubstitute(sub);
+            record.GetDays(sub.Id, "BA13")[2] = 2;
+            record.GetDays(sub.Id, "BA01")[3] = 1;
+            return record;
+        }
+
+        [Fact]
+        public void Substitutes_ArePaidSeparately()
+        {
+            var plain = Sample();
+            var record = SampleWithSubstitute();
+            var sub = record.Substitutes.Single();
+
+            Assert.Equal(PayCalculator.MonthlyPay(plain), PayCalculator.RegularPay(record)); // 正常個案不受影響
+            Assert.Equal(PayCalculator.NetPay(record, sub.Id), PayCalculator.SubstitutePay(record));
+            Assert.True(PayCalculator.SubstitutePay(record) > 0);
+            Assert.Equal(PayCalculator.RegularPay(record) + PayCalculator.SubstitutePay(record), PayCalculator.MonthlyPay(record));
+            Assert.DoesNotContain(record.Clients, c => c.Id == sub.Id);
+            Assert.True(record.IsSubstitute(sub.Id));
+            Assert.Equal(3, record.TotalCountOfClient(sub.Id));
+        }
+
+        [Fact]
+        public void Substitutes_StayInTheirOwnMonth()
+        {
+            var settings = new AppSettings { Clients = [new Client { Name = "甲" }] };
+            var june = MonthRecord.CreateFrom(settings, 2026, 6);
+            var sub = new Client { Name = "丙" };
+            june.AddSubstitute(sub);
+            settings.RememberSubstitute(sub);
+            june.GetDays(sub.Id, "BA13")[0] = 2;
+
+            // 新月份不會帶入代班；套用設定也不會動到代班
+            Assert.Empty(MonthRecord.CreateFrom(settings, 2026, 7).Substitutes);
+            Assert.DoesNotContain(settings.Clients, c => c.Name == "丙");
+            settings.Clients.Add(new Client { Name = "乙" });
+            june.ApplySettings(settings, removeWithCounts: true);
+            Assert.Single(june.Substitutes);
+            Assert.Equal(2, june.CountOf(sub.Id, "BA13"));
+            Assert.True(june.MatchesSettings(settings));
+
+            // 刪除項目時，代班的次數也算在內（會先問）
+            Assert.Equal(2, june.TotalCountOf("BA13"));
+            Assert.True(june.HasAnyCounts);
+
+            june.RemoveSubstitute(sub.Id);
+            Assert.Empty(june.Substitutes);
+            Assert.False(june.Counts.ContainsKey(sub.Id));
+            Assert.Single(settings.SubstituteHistory); // 記錄還在，下次可以直接挑
+        }
+
+        [Fact]
+        public void AddSubstitute_RejectsSamePersonTwice()
+        {
+            var record = SampleWithSubstitute();
+            Assert.Throws<InvalidOperationException>(() => record.AddSubstitute(record.Substitutes[0]));
+        }
+
+        [Fact]
+        public void Export_PutsSubstitutesOnTheirOwnSheets()
+        {
+            var record = SampleWithSubstitute();
+            using var wb = new XLWorkbook(ExportToTemp(record));
+
+            Assert.Equal(["(甲)", "(乙)", "代班(丙)", "服物地點", "服務項目選項"], wb.Worksheets.Select(w => w.Name));
+            var ws = wb.Worksheet("代班(丙)");
+            Assert.Equal("裕善街(丙)", ws.Cell("A2").GetString());
+            Assert.Equal("代班", ws.Cell(2, ExcelExporter.FirstDayCol).GetString());
+            Assert.Contains(ws.Row(2).CellsUsed(), c => c.GetString() == "原居服員：王小明");
+            Assert.Contains(ws.Row(2).CellsUsed(), c => c.GetString() == "備註：6/3～6/5");
+            Assert.Equal((double)PayCalculator.SubstitutePay(record), ws.Cell("C3").Value.GetNumber());
+
+            // 第一張：月薪含代班，旁邊分開寫個案、代班合計
+            var first = wb.Worksheet("(甲)");
+            Assert.Equal((double)PayCalculator.MonthlyPay(record), first.Cell("C1").Value.GetNumber());
+            var row1 = first.Row(1).CellsUsed().ToList();
+            int regular = row1.FindIndex(c => c.GetString() == "個案");
+            int substitute = row1.FindIndex(c => c.GetString() == "代班");
+            Assert.Equal((double)PayCalculator.RegularPay(record), row1[regular + 1].Value.GetNumber());
+            Assert.Equal((double)PayCalculator.SubstitutePay(record), row1[substitute + 1].Value.GetNumber());
+
+            Assert.Contains(wb.Worksheet("服物地點").CellsUsed(), c => c.GetString() == "裕善街(丙)");
+        }
+
+        [Fact]
+        public void Export_WithoutSubstitutes_KeepsOriginalLayout()
+        {
+            using var wb = new XLWorkbook(ExportToTemp(Sample()));
+            var first = wb.Worksheet("(甲)");
+            Assert.Equal(["月薪", ""], first.Row(1).CellsUsed().Select(c => c.HasFormula ? "" : c.GetString()));
+            Assert.True(first.Cell(2, ExcelExporter.FirstDayCol).IsEmpty());
+        }
+
+        [Fact]
+        public void Export_ThenImport_RoundTripsSubstitutes()
+        {
+            var original = new AppSettings();
+            var record = SampleWithSubstitute(original);
+            var path = ExportToTemp(record);
+            var sub = record.Substitutes.Single();
+
+            // 同一台電腦再匯入：沿用原本的 Id
+            var (back, added) = ExcelImporter.ToMonthRecord(ExcelImporter.Read(path), original);
+            Assert.Equal(2, added);                                // 只有甲、乙加到設定
+            Assert.DoesNotContain(original.Clients, c => c.Name == "丙");
+            Assert.Equal(sub.Id, back.Substitutes.Single().Id);
+            Assert.Single(original.SubstituteHistory);
+
+            // 別台電腦（沒有紀錄）匯入：還是認得出是代班
+            var fresh = new AppSettings();
+            var other = ExcelImporter.ToMonthRecord(ExcelImporter.Read(path), fresh).Record;
+            var s = other.Substitutes.Single();
+            Assert.Equal(("丙", "裕善街", "王小明", "6/3～6/5"), (s.Name, s.Location, s.CoverFor, s.Note));
+            Assert.Equal(["甲", "乙"], other.Clients.Select(c => c.Name));
+            Assert.Equal(record.GetDays(sub.Id, "BA13"), other.GetDays(s.Id, "BA13"));
+            Assert.Equal(PayCalculator.SubstitutePay(record), PayCalculator.SubstitutePay(other));
+            Assert.Equal(PayCalculator.MonthlyPay(record), PayCalculator.MonthlyPay(other));
+            Assert.Equal("丙", fresh.SubstituteHistory.Single().Name);
+        }
+
+        [Fact]
+        public void DataStore_ReadsOldMonthWithoutSubstitutes()
+        {
+            DataStore.DataDirectory = Path.Combine(_root, "data");
+            Directory.CreateDirectory(DataStore.MonthsDirectory);
+            File.WriteAllText(Path.Combine(DataStore.MonthsDirectory, "2026-05.json"),
+                """{ "Year": 2026, "Month": 5, "ShareRatio": 0.6, "Clients": [ { "Id": "a", "Name": "甲", "Location": "" } ], "Items": [], "Counts": {} }""");
+
+            var may = DataStore.LoadMonth(2026, 5)!;
+            Assert.Empty(may.Substitutes);
+            Assert.Equal("甲", may.Clients.Single().Name);
+
+            var record = SampleWithSubstitute();
+            DataStore.SaveMonth(record);
+            var loaded = DataStore.LoadMonth(2026, 6)!;
+            Assert.Equal(record.Substitutes.Single().Id, loaded.Substitutes.Single().Id);
+            Assert.Equal("王小明", loaded.Substitutes.Single().CoverFor);
+            Assert.Equal(PayCalculator.SubstitutePay(record), PayCalculator.SubstitutePay(loaded));
+        }
+
         // ---------- 存檔 ----------
 
         [Fact]

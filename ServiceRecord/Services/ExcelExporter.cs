@@ -25,6 +25,14 @@ namespace ServiceRecord.Services
         private static readonly XLColor HolidayFont = XLColor.FromHtml("#8B1515");
         private static readonly XLColor HeaderFill = XLColor.FromHtml("#EEF0FF");
         private static readonly XLColor TotalFill = XLColor.FromHtml("#FFF7D6");
+        private static readonly XLColor SubstituteFont = XLColor.FromHtml("#9A3412");
+        private static readonly XLColor SubstituteFill = XLColor.FromHtml("#FFEDD5");
+
+        /// <summary>代班個案的工作表名稱前綴、D2 的標記，以及原居服員、備註的寫法（匯入時也用這些認）。</summary>
+        public const string SubstitutePrefix = "代班";
+        public const string SubstituteMark = "代班";
+        public const string CoverForLabel = "原居服員：";
+        public const string NoteLabel = "備註：";
 
         public static string DefaultFileName(MonthRecord record, string workerName) =>
             $"{record.Year:D4}-{record.Month:D2}份 {workerName.Trim()}服務紀錄表.xlsx";
@@ -40,12 +48,19 @@ namespace ServiceRecord.Services
             // 讓 Excel 開檔時重新計算全部公式（星期、加總）
             wb.FullCalculationOnLoad = true;
 
+            // 正常個案在前，代班個案接在後面，工作表名稱前面加「代班」
+            var clients = record.AllClients.ToList();
             var names = new List<string>();
-            foreach (var client in record.Clients)
-                names.Add(UniqueSheetName("(" + client.Name + ")", names));
+            foreach (var client in clients)
+                names.Add(UniqueSheetName((record.IsSubstitute(client.Id) ? SubstitutePrefix : "") + "(" + client.Name + ")", names));
 
-            for (int i = 0; i < record.Clients.Count; i++)
-                WriteClientSheet(wb.Worksheets.Add(names[i]), record, record.Clients[i], i == 0 ? names : null);
+            for (int i = 0; i < clients.Count; i++)
+            {
+                var ws = wb.Worksheets.Add(names[i]);
+                WriteClientSheet(ws, record, clients[i], i == 0 ? names : null);
+                if (record.IsSubstitute(clients[i].Id)) WriteSubstituteMark(ws, clients[i]);
+            }
+            if (record.Substitutes.Count > 0) WritePayBreakdown(wb.Worksheet(names[0]), record, names);
 
             WriteLocations(wb.Worksheets.Add(UniqueSheetName("服物地點", names)), record);
             WritePriceList(wb.Worksheets.Add(UniqueSheetName("服務項目選項", names)), record);
@@ -146,6 +161,39 @@ namespace ServiceRecord.Services
             ws.PageSetup.FitToPages(1, 0);
         }
 
+        /// <summary>代班個案的工作表：D2「代班」，後面寫原居服員和備註（匯入時靠這幾格認出是代班）。</summary>
+        private static void WriteSubstituteMark(IXLWorksheet ws, Client client)
+        {
+            var mark = ws.Cell(2, FirstDayCol);
+            mark.Value = SubstituteMark;
+            mark.Style.Font.Bold = true;
+            mark.Style.Font.FontColor = SubstituteFont;
+            mark.Style.Fill.BackgroundColor = SubstituteFill;
+            if (client.CoverFor.Length > 0) ws.Cell(2, FirstDayCol + 2).Value = CoverForLabel + client.CoverFor;
+            if (client.Note.Length > 0) ws.Cell(2, FirstDayCol + 8).Value = NoteLabel + client.Note;
+        }
+
+        /// <summary>有代班時，第一張表的月薪旁邊再分開寫「個案」和「代班」各自的合計。</summary>
+        private static void WritePayBreakdown(IXLWorksheet ws, MonthRecord record, List<string> names)
+        {
+            var clients = record.AllClients.ToList();
+            string Sum(bool substitute) =>
+                string.Join("+", clients.Select((c, i) => (c, i)).Where(x => record.IsSubstitute(x.c.Id) == substitute)
+                    .Select(x => x.i == 0 ? "C3" : $"{QuoteSheet(names[x.i])}!C3")) is { Length: > 0 } f ? f : "0";
+
+            void Write(int col, string label, string formula)
+            {
+                ws.Cell(1, col).Value = label;
+                var value = ws.Range(1, col + 1, 1, col + 3).Merge();
+                value.FirstCell().FormulaA1 = formula;
+                value.Style.NumberFormat.Format = "#,##0.##";
+                ws.Range(1, col, 1, col + 3).Style.Font.Bold = true;
+            }
+            Write(FirstDayCol + 1, "個案", Sum(false));
+            Write(FirstDayCol + 6, SubstituteMark, Sum(true));
+            ws.Cell(1, FirstDayCol + 6).Style.Font.FontColor = SubstituteFont;
+        }
+
         private static void WriteLocations(IXLWorksheet ws, MonthRecord record)
         {
             ws.Cell(1, 1).Value = "服物地點";
@@ -153,6 +201,19 @@ namespace ServiceRecord.Services
             for (int i = 0; i < record.Clients.Count; i++)
                 ws.Cell(i + 2, 1).Value = record.Clients[i].Label;
             ws.Column(1).Width = 24;
+            if (record.Substitutes.Count == 0) return;
+
+            // 代班個案另外列一段
+            int row = record.Clients.Count + 3;
+            ws.Cell(row, 1).Value = SubstituteMark;
+            ws.Cell(row, 1).Style.Font.Bold = true;
+            foreach (var s in record.Substitutes)
+            {
+                row++;
+                ws.Cell(row, 1).Value = s.Label;
+                ws.Cell(row, 2).Value = s.SubstituteInfo;
+            }
+            ws.Column(2).Width = 30;
         }
 
         private static void WritePriceList(IXLWorksheet ws, MonthRecord record)
