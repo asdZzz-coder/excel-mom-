@@ -374,7 +374,7 @@ namespace ServiceRecord.Tests
             var record = SampleWithSubstitute();
             using var wb = new XLWorkbook(ExportToTemp(record));
 
-            Assert.Equal(["(甲)", "(乙)", "代班(丙)", "服物地點", "服務項目選項"], wb.Worksheets.Select(w => w.Name));
+            Assert.Equal(["(甲)", "(乙)", "代班(丙)", "代班明細", "服物地點", "服務項目選項"], wb.Worksheets.Select(w => w.Name));
             var ws = wb.Worksheet("代班(丙)");
             Assert.Equal("裕善街(丙)", ws.Cell("A2").GetString());
             Assert.Equal("代班", ws.Cell(2, ExcelExporter.FirstDayCol).GetString());
@@ -392,6 +392,46 @@ namespace ServiceRecord.Tests
             Assert.Equal((double)PayCalculator.SubstitutePay(record), row1[substitute + 1].Value.GetNumber());
 
             Assert.Contains(wb.Worksheet("服物地點").CellsUsed(), c => c.GetString() == "裕善街(丙)");
+        }
+
+        [Fact]
+        public void Entries_ListWorkByDateWithPriceAndAmount()
+        {
+            var record = SampleWithSubstitute();
+            var entries = PayCalculator.Entries(record, record.Substitutes[0].Id);
+
+            Assert.Equal(
+                [(new DateOnly(2026, 6, 3), "BA13", 195, 2, 390), (new DateOnly(2026, 6, 4), "BA01", 260, 1, 260)],
+                entries.Select(e => (e.Date, e.Item.Code, e.Item.Price, e.Count, e.Amount)));
+            Assert.Equal(PayCalculator.Subtotal(record, record.Substitutes[0].Id), entries.Sum(e => e.Amount));
+            Assert.Empty(PayCalculator.Entries(record, "沒有這個人"));
+        }
+
+        [Fact]
+        public void Export_SubstituteDetailSheet_ListsWorkAndTotals()
+        {
+            var record = SampleWithSubstitute();
+            var path = ExportToTemp(record);
+            using var wb = new XLWorkbook(path);
+            var ws = wb.Worksheet("代班明細");
+
+            Assert.Equal("日期", ws.Cell("C1").GetString());
+            Assert.Equal("裕善街(丙)", ws.Cell("A2").GetString());
+            Assert.Equal("王小明", ws.Cell("B2").GetString());
+            Assert.Equal(new DateTime(2026, 6, 3), ws.Cell("C2").Value.GetDateTime());
+            Assert.Equal("星期三", ws.Cell("D2").GetString());
+            Assert.Equal(("BA13", "陪同外出", 195.0, 2.0, 390.0),
+                (ws.Cell("E2").GetString(), ws.Cell("F2").GetString(), ws.Cell("G2").Value.GetNumber(), ws.Cell("H2").Value.GetNumber(), ws.Cell("I2").Value.GetNumber()));
+            Assert.Equal("BA01", ws.Cell("E3").GetString());
+            Assert.Equal("小計", ws.Cell("F4").GetString());
+            Assert.Equal(650.0, ws.Cell("I4").Value.GetNumber());
+            Assert.Equal((double)PayCalculator.NetPay(record, record.Substitutes[0].Id), ws.Cell("I5").Value.GetNumber());
+            var total = ws.Column(6).CellsUsed().Single(c => c.GetString().StartsWith("代班合計"));
+            Assert.Equal((double)PayCalculator.SubstitutePay(record), ws.Cell(total.Address.RowNumber, 9).Value.GetNumber());
+
+            // 匯入時不會把明細表當成個案
+            var back = ExcelImporter.ToMonthRecord(ExcelImporter.Read(path), new AppSettings()).Record;
+            Assert.Single(back.Substitutes);
         }
 
         [Fact]

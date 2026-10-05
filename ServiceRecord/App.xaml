@@ -42,6 +42,10 @@
         <SolidColorBrush x:Key="CrossBrush" Color="#FFF0B0"/>
         <SolidColorBrush x:Key="CrossHeaderBrush" Color="#FFE38F"/>
         <SolidColorBrush x:Key="CrossLineBrush" Color="#D99A00"/>
+        <SolidColorBrush x:Key="SubstituteBrush" Color="#EA580C"/>
+        <SolidColorBrush x:Key="SubstituteSoftBrush" Color="#FFF1E6"/>
+        <SolidColorBrush x:Key="SubstituteSelectedBrush" Color="#FFDDBF"/>
+        <SolidColorBrush x:Key="SubstituteTextBrush" Color="#7C2D12"/>
 
         <LinearGradientBrush x:Key="AccentGradient" StartPoint="0,0" EndPoint="1,1">
             <GradientStop Color="#4338CA" Offset="0"/>

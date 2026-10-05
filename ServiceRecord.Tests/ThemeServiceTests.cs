@@ -17,7 +17,7 @@ namespace ServiceRecord.Tests
 
         private static string ReadXaml(string name) => File.ReadAllText(Path.Combine(SourceDir(), name));
 
-        public static TheoryData<string> XamlFiles => new() { "App.xaml", "MainWindow.xaml", "SettingsWindow.xaml", "ItemEditWindow.xaml" };
+        public static TheoryData<string> XamlFiles => new() { "App.xaml", "MainWindow.xaml", "SettingsWindow.xaml", "ItemEditWindow.xaml", "SubstituteWindow.xaml" };
 
         // ---------- 切換邏輯 ----------
 
@@ -167,7 +167,13 @@ namespace ServiceRecord.Tests
             { "DangerBrush", "CrossHeaderBrush" },
             // 藍字：次數、實領、選到的分頁
             { "AccentTextBrush", "CardBrush" }, { "AccentTextBrush", "AccentSoftBrush" }, { "AccentTextBrush", "TotalBrush" },
-            { "AccentTextBrush", "CrossBrush" }, { "AccentTextBrush", "CellSelectedBrush" },
+            { "AccentTextBrush", "CrossBrush" }, { "AccentTextBrush", "CellSelectedBrush" }, { "AccentTextBrush", "HoverBrush" },
+            // 代班（橘色）：清單卡片、標籤、代班明細
+            { "TextBrush", "SubstituteSoftBrush" }, { "TextBrush", "SubstituteSelectedBrush" },
+            { "MutedBrush", "SubstituteSoftBrush" }, { "MutedBrush", "SubstituteSelectedBrush" },
+            { "SubstituteTextBrush", "CardBrush" }, { "SubstituteTextBrush", "SubstituteSoftBrush" },
+            { "SubstituteTextBrush", "SubstituteSelectedBrush" },
+            { "DangerBrush", "SubstituteSoftBrush" },
         };
 
         [Theory]
@@ -180,6 +186,8 @@ namespace ServiceRecord.Tests
         [InlineData("GridLineBrush", "CardBrush", 1.5)]
         [InlineData("GridLineBrush", "AltRowBrush", 1.5)]
         [InlineData("GridLineBrush", "WeekendBrush", 1.4)]
+        [InlineData("SubstituteBrush", "CardBrush", 3.0)]
+        [InlineData("SubstituteBrush", "SubstituteSoftBrush", 3.0)]
         public void Palette_LinesAreVisibleInBothThemes(string fg, string bg, double minRatio) => AssertContrast(fg, bg, minRatio);
 
         private static void AssertContrast(string fg, string bg, double minRatio)

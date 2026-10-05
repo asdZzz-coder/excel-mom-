@@ -70,6 +70,11 @@ namespace ServiceRecord.Services
             ("CrossBrush",              "#FFF0B0", "#3A3418"),
             ("CrossHeaderBrush",        "#FFE38F", "#2F280E"),
             ("CrossLineBrush",          "#D99A00", "#D4A72C"),
+            // 代班：暖橘色，跟正常個案（藍紫）一眼分得出來
+            ("SubstituteBrush",         "#EA580C", "#FB923C"),
+            ("SubstituteSoftBrush",     "#FFF1E6", "#2E2118"),
+            ("SubstituteSelectedBrush", "#FFDDBF", "#3D2614"),
+            ("SubstituteTextBrush",     "#7C2D12", "#FDBA74"),
         };
 
         /// <summary>月薪卡片的漸層（左上 → 右下）。</summary>

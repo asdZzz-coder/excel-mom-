@@ -524,6 +524,27 @@ namespace ServiceRecord
             var client = SelectedClient;
             SubtotalText.Text = client == null ? "0" : PayCalculator.Subtotal(_record, client.Id).ToString("#,##0");
             NetPayText.Text = client == null ? "0" : PayCalculator.Money(PayCalculator.NetPay(_record, client.Id));
+            UpdateDetails(client);
+        }
+
+        /// <summary>選到代班個案時，下方的「代班明細」依日期列出工作內容、單價、次數、金額。</summary>
+        private void UpdateDetails(Client? client)
+        {
+            if (client == null || !_record.IsSubstitute(client.Id))
+            {
+                DetailPanel.Visibility = Visibility.Collapsed;
+                DetailGrid.ItemsSource = null;
+                return;
+            }
+
+            var entries = PayCalculator.Entries(_record, client.Id);
+            DetailGrid.ItemsSource = entries.Select(e => new DetailRow(e)).ToList();
+            DetailGrid.Visibility = entries.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            DetailEmptyText.Visibility = entries.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
+            int days = entries.Select(e => e.Date).Distinct().Count();
+            DetailSummaryText.Text = entries.Count == 0 ? "" :
+                $"共 {days} 天、{entries.Sum(e => e.Count)} 次　金額 {entries.Sum(e => e.Amount):#,##0}　實領 {PayCalculator.Money(PayCalculator.NetPay(_record, client.Id))}";
+            DetailPanel.Visibility = Visibility.Visible;
         }
 
         private void SaveMonth()

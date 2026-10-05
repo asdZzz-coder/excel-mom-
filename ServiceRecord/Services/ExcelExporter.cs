@@ -33,6 +33,7 @@ namespace ServiceRecord.Services
         public const string SubstituteMark = "代班";
         public const string CoverForLabel = "原居服員：";
         public const string NoteLabel = "備註：";
+        public const string DetailSheetName = "代班明細";
 
         public static string DefaultFileName(MonthRecord record, string workerName) =>
             $"{record.Year:D4}-{record.Month:D2}份 {workerName.Trim()}服務紀錄表.xlsx";
@@ -60,7 +61,11 @@ namespace ServiceRecord.Services
                 WriteClientSheet(ws, record, clients[i], i == 0 ? names : null);
                 if (record.IsSubstitute(clients[i].Id)) WriteSubstituteMark(ws, clients[i]);
             }
-            if (record.Substitutes.Count > 0) WritePayBreakdown(wb.Worksheet(names[0]), record, names);
+            if (record.Substitutes.Count > 0)
+            {
+                WritePayBreakdown(wb.Worksheet(names[0]), record, names);
+                WriteSubstituteDetails(wb.Worksheets.Add(UniqueSheetName(DetailSheetName, names)), record);
+            }
 
             WriteLocations(wb.Worksheets.Add(UniqueSheetName("服物地點", names)), record);
             WritePriceList(wb.Worksheets.Add(UniqueSheetName("服務項目選項", names)), record);
@@ -192,6 +197,69 @@ namespace ServiceRecord.Services
             Write(FirstDayCol + 1, "個案", Sum(false));
             Write(FirstDayCol + 6, SubstituteMark, Sum(true));
             ws.Cell(1, FirstDayCol + 6).Style.Font.FontColor = SubstituteFont;
+        }
+
+        /// <summary>
+        /// 「代班明細」：每位代班個案依日期列出做了哪些服務（日期、星期、代碼、服務項目、單價、次數、金額），
+        /// 每位後面一列小計和實領，最後是代班合計。
+        /// </summary>
+        private static void WriteSubstituteDetails(IXLWorksheet ws, MonthRecord record)
+        {
+            string[] headers = ["代班個案", "原居服員", "日期", "星期", "代碼", "服務項目", "單價", "次數", "金額"];
+            for (int c = 0; c < headers.Length; c++) ws.Cell(1, c + 1).Value = headers[c];
+            var head = ws.Range(1, 1, 1, headers.Length);
+            head.Style.Font.Bold = true;
+            head.Style.Fill.BackgroundColor = SubstituteFill;
+            head.Style.Font.FontColor = SubstituteFont;
+
+            string ratio = record.ShareRatio.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var netPayCells = new List<string>();
+            int row = 2;
+            foreach (var sub in record.Substitutes)
+            {
+                int first = row;
+                foreach (var e in PayCalculator.Entries(record, sub.Id))
+                {
+                    ws.Cell(row, 1).Value = sub.Label;
+                    ws.Cell(row, 2).Value = sub.CoverFor;
+                    ws.Cell(row, 3).Value = e.Date.ToDateTime(TimeOnly.MinValue);
+                    ws.Cell(row, 3).Style.NumberFormat.Format = "m/d";
+                    ws.Cell(row, 4).Value = "星期" + "日一二三四五六"[(int)e.Date.DayOfWeek];
+                    if (HolidayService.IsOffDay(e.Date)) ws.Range(row, 3, row, 4).Style.Font.FontColor = HolidayFont;
+                    ws.Cell(row, 5).Value = e.Item.Code;
+                    ws.Cell(row, 6).Value = e.Item.Name;
+                    ws.Cell(row, 7).Value = e.Item.Price;
+                    ws.Cell(row, 8).Value = e.Count;
+                    ws.Cell(row, 9).FormulaA1 = $"G{row}*H{row}";
+                    row++;
+                }
+
+                // 這位的小計、實領
+                ws.Cell(row, 1).Value = sub.Label;
+                ws.Cell(row, 6).Value = "小計";
+                ws.Cell(row, 8).FormulaA1 = row > first ? $"SUM(H{first}:H{row - 1})" : "0";
+                ws.Cell(row, 9).FormulaA1 = row > first ? $"SUM(I{first}:I{row - 1})" : "0";
+                ws.Cell(row + 1, 6).Value = $"實領（× {ratio}）";
+                ws.Cell(row + 1, 9).FormulaA1 = $"I{row}*{ratio}";
+                ws.Range(row, 1, row + 1, headers.Length).Style.Font.Bold = true;
+                ws.Range(row, 1, row + 1, headers.Length).Style.Fill.BackgroundColor = TotalFill;
+                netPayCells.Add($"I{row + 1}");
+                row += 3; // 空一列再接下一位
+            }
+
+            ws.Cell(row, 6).Value = "代班合計（實領）";
+            ws.Cell(row, 9).FormulaA1 = string.Join("+", netPayCells);
+            ws.Range(row, 1, row, headers.Length).Style.Font.Bold = true;
+            ws.Range(row, 1, row, headers.Length).Style.Fill.BackgroundColor = SubstituteFill;
+            ws.Range(row, 1, row, headers.Length).Style.Font.FontColor = SubstituteFont;
+
+            ws.Range(2, 9, row, 9).Style.NumberFormat.Format = "#,##0.##";
+            ws.Range(1, 1, row, headers.Length).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            ws.Range(1, 1, 1, headers.Length).Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+            double[] widths = [18, 12, 8, 9, 8, 24, 8, 7, 11];
+            for (int c = 0; c < widths.Length; c++) ws.Column(c + 1).Width = widths[c];
+            ws.SheetView.FreezeRows(1);
+            ws.PageSetup.FitToPages(1, 0);
         }
 
         private static void WriteLocations(IXLWorksheet ws, MonthRecord record)

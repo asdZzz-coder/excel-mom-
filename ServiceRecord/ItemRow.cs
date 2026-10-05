@@ -126,4 +126,30 @@ namespace ServiceRecord
 
         public event PropertyChangedEventHandler? PropertyChanged;
     }
+
+    /// <summary>代班明細表的一列：日期、服務項目、單價、次數、金額（唯讀）。</summary>
+    public sealed class DetailRow
+    {
+        private static readonly string[] WeekdayNames = ["日", "一", "二", "三", "四", "五", "六"];
+
+        public DetailRow(Services.PayCalculator.Entry entry)
+        {
+            DateText = $"{entry.Date.Month}/{entry.Date.Day}（{WeekdayNames[(int)entry.Date.DayOfWeek]}）";
+            IsOffDay = Services.HolidayService.IsOffDay(entry.Date);
+            Code = entry.Item.Code;
+            Name = entry.Item.Name;
+            Price = entry.Item.Price;
+            Count = entry.Count;
+            AmountText = entry.Amount.ToString("#,##0");
+        }
+
+        public string DateText { get; }
+        /// <summary>週末、國定假日：日期用紅字。</summary>
+        public bool IsOffDay { get; }
+        public string Code { get; }
+        public string Name { get; }
+        public int Price { get; }
+        public int Count { get; }
+        public string AmountText { get; }
+    }
 }

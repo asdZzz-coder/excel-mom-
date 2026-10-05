@@ -18,6 +18,48 @@
                     ToolTip="從這個月刪除這個項目" Focusable="False"/>
         </DataTemplate>
 
+        <!-- 代班清單：每一位都是暖橘色的卡片，選到時顏色加深＋左邊橘色條＋框 -->
+        <Style x:Key="SubstituteItem" TargetType="ListBoxItem">
+            <Setter Property="Margin" Value="0,0,4,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Grid>
+                            <Border x:Name="Bd" CornerRadius="12" Padding="12,10" Background="{DynamicResource SubstituteSoftBrush}"
+                                    BorderBrush="{DynamicResource SubstituteSoftBrush}" BorderThickness="2">
+                                <ContentPresenter/>
+                            </Border>
+                            <Border x:Name="Bar" Width="4" Height="24" CornerRadius="2" HorizontalAlignment="Left" Margin="2,0,0,0"
+                                    Background="{DynamicResource SubstituteBrush}" Visibility="Collapsed"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SubstituteSelectedBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SubstituteSelectedBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource SubstituteBrush}"/>
+                                <Setter TargetName="Bar" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 代班明細：放假日的日期用紅字 -->
+        <Style x:Key="DetailDateText" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsOffDay}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="CenterText" TargetType="TextBlock">
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -150,7 +192,7 @@
                                     <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock FontSize="14" Foreground="{DynamicResource MutedBrush}" Margin="0,2,0,0">
                                         <Run Text="實領"/>
-                                        <Run Text="{Binding NetPayText, Mode=OneWay}"/>
+                                        <Run Text="{Binding NetPayText, Mode=OneWay}" FontWeight="Bold" Foreground="{DynamicResource AccentTextBrush}"/>
                                     </TextBlock>
                                 </StackPanel>
                             </DataTemplate>
@@ -168,7 +210,10 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="代班" Style="{StaticResource FieldLabel}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal" Margin="4,0,0,0" VerticalAlignment="Center">
+                                <Border Width="10" Height="10" CornerRadius="5" Background="{DynamicResource SubstituteBrush}" Margin="0,0,8,0"/>
+                                <TextBlock Text="代班" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource SubstituteTextBrush}"/>
+                            </StackPanel>
                             <Button x:Name="AddSubstituteButton" Grid.Column="1" Click="AddSubstitute_Click" Padding="10,5" FontSize="14"
                                     AutomationProperties.Name="新增代班" ToolTip="加一位這個月的代班個案（不會加到設定的個案名單）">
                                 <StackPanel Orientation="Horizontal">
@@ -178,13 +223,14 @@
                             </Button>
                         </Grid>
                     </Grid>
-                    <ListBox x:Name="SubstituteList" Grid.Row="3" Style="{StaticResource EntryListStyle}" MaxHeight="230"
+                    <ListBox x:Name="SubstituteList" Grid.Row="3" Style="{StaticResource EntryListStyle}" MaxHeight="250"
+                             ItemContainerStyle="{StaticResource SubstituteItem}"
                              SelectionChanged="ClientList_SelectionChanged" AutomationProperties.Name="代班個案">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <StackPanel Margin="4,0,0,0">
-                                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Info}" FontSize="14" Foreground="{DynamicResource MutedBrush}" Margin="0,2,0,0"
+                                <StackPanel Margin="6,0,0,0">
+                                    <TextBlock Text="{Binding Label}" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Info}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource SubstituteTextBrush}" Margin="0,2,0,0"
                                                TextTrimming="CharacterEllipsis" ToolTip="{Binding Info}">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
@@ -198,7 +244,7 @@
                                     </TextBlock>
                                     <TextBlock FontSize="14" Foreground="{DynamicResource MutedBrush}" Margin="0,2,0,0">
                                         <Run Text="實領"/>
-                                        <Run Text="{Binding NetPayText, Mode=OneWay}"/>
+                                        <Run Text="{Binding NetPayText, Mode=OneWay}" FontWeight="Bold" Foreground="{DynamicResource SubstituteTextBrush}"/>
                                     </TextBlock>
                                 </StackPanel>
                             </DataTemplate>
@@ -240,6 +286,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <Grid Margin="2,0,0,10">
@@ -251,13 +298,13 @@
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <!-- 代班個案：標題前面加「代班」標籤 -->
-                                <Border x:Name="SubstituteBadge" Background="{DynamicResource AccentSoftBrush}" CornerRadius="6" Padding="8,2"
+                                <Border x:Name="SubstituteBadge" Background="{DynamicResource SubstituteSelectedBrush}" BorderBrush="{DynamicResource SubstituteBrush}" BorderThickness="1.5" CornerRadius="6" Padding="8,2"
                                         Margin="0,0,10,0" VerticalAlignment="Center" Visibility="Collapsed">
-                                    <TextBlock Text="代班" Foreground="{DynamicResource AccentTextBrush}" FontWeight="Bold" FontSize="16"/>
+                                    <TextBlock Text="代班" Foreground="{DynamicResource SubstituteTextBrush}" FontWeight="Bold" FontSize="16"/>
                                 </Border>
                                 <TextBlock x:Name="ClientTitle" FontSize="21" FontWeight="SemiBold" FontFamily="{StaticResource DisplayFont}"/>
                             </StackPanel>
-                            <TextBlock x:Name="SubstituteInfoText" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource AccentTextBrush}"
+                            <TextBlock x:Name="SubstituteInfoText" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource SubstituteTextBrush}"
                                        Margin="0,3,0,0" TextWrapping="Wrap" Visibility="Collapsed"/>
                             <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="14" Margin="0,3,0,0"
                                        Text="點格子直接打數字，Enter 往下一格；選好格子按 + / − 加減一次，Delete 清除。"/>
@@ -294,7 +341,37 @@
                     <TextBlock x:Name="NoDataHint" Grid.Row="1" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"
                                Foreground="{DynamicResource MutedBrush}" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"/>
 
-                    <Grid Grid.Row="2" Margin="0,12,0,0">
+                    <!-- 代班明細：選到代班個案時，依日期列出做了哪些服務、單價、次數、金額 -->
+                    <Border x:Name="DetailPanel" Grid.Row="2" Margin="0,12,0,0" Padding="12,10" CornerRadius="12" Visibility="Collapsed"
+                            Background="{DynamicResource SubstituteSoftBrush}" BorderBrush="{DynamicResource SubstituteBrush}" BorderThickness="1.5">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel Orientation="Horizontal" Margin="2,0,0,8">
+                                <TextBlock Style="{StaticResource Icon}" Text="&#xE9D5;" Foreground="{DynamicResource SubstituteTextBrush}" Margin="0,0,8,0"/>
+                                <TextBlock Text="代班明細" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource SubstituteTextBrush}"/>
+                                <TextBlock x:Name="DetailSummaryText" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource SubstituteTextBrush}"
+                                           Margin="14,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <DataGrid x:Name="DetailGrid" Grid.Row="1" MaxHeight="210" IsReadOnly="True" AutoGenerateColumns="False" AutomationProperties.Name="代班明細表"
+                                      HeadersVisibility="Column" SelectionMode="Single" SelectionUnit="FullRow">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="日期" Binding="{Binding DateText}" Width="104" ElementStyle="{StaticResource DetailDateText}"/>
+                                    <DataGridTextColumn Header="代碼" Binding="{Binding Code}" Width="74" ElementStyle="{StaticResource LeftText}"/>
+                                    <DataGridTextColumn Header="服務項目（工作內容）" Binding="{Binding Name}" Width="*" MinWidth="180" ElementStyle="{StaticResource LeftText}"/>
+                                    <DataGridTextColumn Header="單價" Binding="{Binding Price}" Width="80" ElementStyle="{StaticResource RightText}"/>
+                                    <DataGridTextColumn Header="次數" Binding="{Binding Count}" Width="64" ElementStyle="{StaticResource CountText}"/>
+                                    <DataGridTextColumn Header="金額" Binding="{Binding AmountText}" Width="100" ElementStyle="{StaticResource RightText}"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <TextBlock x:Name="DetailEmptyText" Grid.Row="1" FontSize="15" Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap"
+                                       Margin="2,0,0,2" Text="還沒有填代班的次數。在上面的表格填好後，這裡會依日期列出代班的工作內容、單價和金額。"/>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="3" Margin="0,12,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
