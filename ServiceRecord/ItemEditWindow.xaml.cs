@@ -5,7 +5,7 @@ using ServiceRecord.Services;
 
 namespace ServiceRecord
 {
-    /// <summary>在目前的月份加一個服務項目：可以從設定的清單選，也可以自己填新的代碼、名稱、單價。</summary>
+    /// <summary>在目前的月份加一個服務項目：可以從設定的清單選，也可以自己填新的代碼、名稱、單價、人數。</summary>
     public partial class ItemEditWindow : Window
     {
         private readonly MonthRecord _record;
@@ -41,6 +41,7 @@ namespace ServiceRecord
             CodeBox.Text = item.Code;
             NameBox.Text = item.Name;
             PriceBox.Text = item.Price.ToString();
+            PeopleBox.Text = item.People.ToString();
         }
 
         /// <summary>設定裡已經有這個代碼時，不需要再加一次。</summary>
@@ -59,6 +60,7 @@ namespace ServiceRecord
                 _record.HasItem(code) ? $"這個月已經有 {code} 了。" :
                 name.Length == 0 ? "請填服務項目名稱。" :
                 !int.TryParse(PriceBox.Text.Trim(), out var price) || price < 0 ? "單價要是 0 以上的整數。" :
+                !int.TryParse(PeopleBox.Text.Trim(), out var people) || people < 1 ? "人數要是 1 以上的整數。" :
                 null;
             if (error != null)
             {
@@ -66,7 +68,7 @@ namespace ServiceRecord
                 return;
             }
 
-            Result = new ServiceItem { Code = code, Name = name, Price = int.Parse(PriceBox.Text.Trim()) };
+            Result = new ServiceItem { Code = code, Name = name, Price = int.Parse(PriceBox.Text.Trim()), People = int.Parse(PeopleBox.Text.Trim()) };
             DialogResult = true;
         }
     }

@@ -173,6 +173,9 @@ namespace ServiceRecord
             var badPrice = _items.FirstOrDefault(i => i.Price < 0);
             if (badPrice != null)
                 return Fail(1, $"服務項目「{badPrice.Code}」的單價不能是負數。");
+            var badPeople = _items.FirstOrDefault(i => i.People < 1);
+            if (badPeople != null)
+                return Fail(1, $"服務項目「{badPeople.Code}」的人數至少要 1 人。");
 
             if (WorkerBox.Text.Trim().Length == 0)
                 return Fail(2, "請填居服員姓名（匯出檔名會用到）。");

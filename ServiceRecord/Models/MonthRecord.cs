@@ -121,7 +121,7 @@ namespace ServiceRecord.Models
         public bool MatchesSettings(AppSettings settings) =>
             ShareRatio == settings.ShareRatio
             && Clients.Select(c => (c.Id, c.Name, c.Location)).SequenceEqual(settings.Clients.Select(c => (c.Id, c.Name, c.Location)))
-            && Items.Select(i => (i.Code, i.Name, i.Price)).SequenceEqual(settings.ServiceItems.Select(i => (i.Code, i.Name, i.Price)));
+            && Items.Select(i => (i.Code, i.Name, i.Price, i.People)).SequenceEqual(settings.ServiceItems.Select(i => (i.Code, i.Name, i.Price, i.People)));
 
         /// <summary>套用設定時會被拿掉、但本月已經有次數的項目與個案（套用前要先問使用者）。</summary>
         public (List<ServiceItem> Items, List<Client> Clients) RemovedWithCounts(AppSettings settings)
@@ -132,7 +132,7 @@ namespace ServiceRecord.Models
         }
 
         /// <summary>
-        /// 讓這個月改用設定裡的個案、項目（名稱、單價、順序）和比例。
+        /// 讓這個月改用設定裡的個案、項目（名稱、單價、人數、順序）和比例。
         /// 設定裡已經沒有的項目或個案：沒有次數的直接拿掉；有次數的看 removeWithCounts 決定刪掉或保留在最後面。
         /// </summary>
         public void ApplySettings(AppSettings settings, bool removeWithCounts)

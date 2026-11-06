@@ -85,6 +85,8 @@ namespace ServiceRecord.Services
             if (client.IsSubstitute) sheetName = sheetName[ExcelExporter.SubstitutePrefix.Length..];
             client.Name = ClientNameFromSheet(sheetName);
             var items = new List<ServiceItem>();
+            // 人數：本程式匯出的檔，星期那一列的 AK 寫著「人數」才有；原本的 Excel 沒有這欄，都算 1 人
+            bool hasPeople = ValueOf(ws.Cell(dateRow + 1, ExcelExporter.PeopleCol)).ToString(CultureInfo.InvariantCulture).Trim() == ExcelExporter.PeopleHeader;
             for (int r = dateRow + 1; r <= lastRow; r++)
             {
                 var code = ValueOf(ws.Cell(r, CodeCol)).ToString(CultureInfo.InvariantCulture).Trim();
@@ -100,6 +102,7 @@ namespace ServiceRecord.Services
                     Code = unique,
                     Name = ValueOf(ws.Cell(r, NameCol)).ToString(CultureInfo.InvariantCulture).Trim(),
                     Price = (int)Math.Round(price.Value),
+                    People = hasPeople && AsNumber(ValueOf(ws.Cell(r, ExcelExporter.PeopleCol))) is double people && people >= 1 ? (int)Math.Round(people) : 1,
                 });
 
                 var days = new int[MonthRecord.MaxDays];

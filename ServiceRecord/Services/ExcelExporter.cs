@@ -11,6 +11,7 @@ namespace ServiceRecord.Services
     ///   C4 費用  D4 起 =TEXT(D3,"aaaa") 顯示星期
     ///   第 5 列起：A 代碼、B 名稱、C 單價、D..AH 每日次數、AI =SUM(D:AH)、AJ =AI*C
     ///   合計列：AJ =SUM(AJ5:AJn)*比例
+    /// 這個月有多人一起做的項目時才多一欄 AK「人數」，AJ 變成 =AI*C/AK；全部 1 人時跟原本的格式一樣。
     /// 另附「服物地點」和「服務項目選項」兩張表。
     /// </summary>
     public static class ExcelExporter
@@ -20,6 +21,11 @@ namespace ServiceRecord.Services
         public const int CodeCol = 1, NameCol = 2, PriceCol = 3, FirstDayCol = 4;
         public const int CountCol = FirstDayCol + MonthRecord.MaxDays; // AI
         public const int AmountCol = CountCol + 1;                     // AJ
+        public const int PeopleCol = AmountCol + 1;                    // AK（有多人項目才有）
+        public const string PeopleHeader = "人數";
+
+        /// <summary>金額可能除不盡（例如 ÷3）時的顯示格式。</summary>
+        private const string SharedMoneyFormat = "#,##0.00";
 
         private static readonly XLColor WeekendFill = XLColor.FromHtml("#FDECEC");
         private static readonly XLColor HolidayFont = XLColor.FromHtml("#8B1515");
@@ -78,6 +84,8 @@ namespace ServiceRecord.Services
             int totalRow = TotalRow(record);
             int lastItemRow = totalRow - 1;
             string amount = Col(AmountCol), count = Col(CountCol);
+            bool shared = HasSharedItems(record);
+            int lastCol = shared ? PeopleCol : AmountCol;
 
             // 第 1 列：月薪（只放在第一張）
             if (allSheetsForMonthlyPay != null)
@@ -110,8 +118,9 @@ namespace ServiceRecord.Services
             }
             ws.Cell(4, CountCol).Value = "次數";
             ws.Cell(4, AmountCol).Value = "金額";
-            ws.Range(3, 1, 4, AmountCol).Style.Fill.BackgroundColor = HeaderFill;
-            ws.Range(3, 1, 4, AmountCol).Style.Font.Bold = true;
+            if (shared) ws.Cell(4, PeopleCol).Value = PeopleHeader;
+            ws.Range(3, 1, 4, lastCol).Style.Fill.BackgroundColor = HeaderFill;
+            ws.Range(3, 1, 4, lastCol).Style.Font.Bold = true;
 
             // 服務項目
             for (int i = 0; i < record.Items.Count; i++)
@@ -126,7 +135,9 @@ namespace ServiceRecord.Services
                     if (dayCounts[d - 1] != 0)
                         ws.Cell(r, FirstDayCol + d - 1).Value = dayCounts[d - 1];
                 ws.Cell(r, CountCol).FormulaA1 = $"SUM({Col(FirstDayCol)}{r}:{Col(CountCol - 1)}{r})";
-                ws.Cell(r, AmountCol).FormulaA1 = $"{count}{r}*{Col(PriceCol)}{r}";
+                ws.Cell(r, AmountCol).FormulaA1 = $"{count}{r}*{Col(PriceCol)}{r}" + (shared ? $"/{Col(PeopleCol)}{r}" : "");
+                if (shared) ws.Cell(r, PeopleCol).Value = item.People;
+                if (item.People > 1) ws.Cell(r, AmountCol).Style.NumberFormat.Format = SharedMoneyFormat;
             }
 
             // 合計列（實領）
@@ -137,6 +148,12 @@ namespace ServiceRecord.Services
             ws.Range(totalRow, CountCol, totalRow, AmountCol).Style.Fill.BackgroundColor = TotalFill;
             ws.Range(totalRow, CountCol, totalRow, AmountCol).Style.Font.Bold = true;
             ws.Cell(3, PriceCol).Style.Font.Bold = true;
+            if (shared)
+            {
+                ws.Cell(1, PriceCol).Style.NumberFormat.Format = SharedMoneyFormat;
+                ws.Cell(3, PriceCol).Style.NumberFormat.Format = SharedMoneyFormat;
+                ws.Cell(totalRow, AmountCol).Style.NumberFormat.Format = SharedMoneyFormat;
+            }
 
             // 放假日（週末、國定假日、補假）上底色、日期紅字；節日名稱放在日期的註解
             for (int d = 1; d <= days; d++)
@@ -151,16 +168,17 @@ namespace ServiceRecord.Services
             }
 
             // 框線、欄寬、凍結窗格、列印
-            var table = ws.Range(3, 1, Math.Max(lastItemRow, 4), AmountCol);
+            var table = ws.Range(3, 1, Math.Max(lastItemRow, 4), lastCol);
             table.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             table.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
-            ws.Range(3, FirstDayCol, Math.Max(lastItemRow, 4), AmountCol).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            ws.Range(3, FirstDayCol, Math.Max(lastItemRow, 4), lastCol).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             ws.Column(CodeCol).Width = 8;
             ws.Column(NameCol).Width = 22;
-            ws.Column(PriceCol).Width = 8;
+            ws.Column(PriceCol).Width = shared ? 11 : 8; // 有小數時月薪、實領比較長
             for (int c = FirstDayCol; c < CountCol; c++) ws.Column(c).Width = 5.5;
             ws.Column(CountCol).Width = 6;
             ws.Column(AmountCol).Width = 10;
+            if (shared) ws.Column(PeopleCol).Width = 6;
             ws.SheetView.Freeze(HeaderRows, PriceCol);
             ws.PageSetup.PageOrientation = XLPageOrientation.Landscape;
             ws.PageSetup.FitToPages(1, 0);
@@ -201,11 +219,12 @@ namespace ServiceRecord.Services
 
         /// <summary>
         /// 「代班明細」：每位代班個案依日期列出做了哪些服務（日期、星期、代碼、服務項目、單價、次數、金額），
-        /// 每位後面一列小計和實領，最後是代班合計。
+        /// 每位後面一列小計和實領，最後是代班合計。這個月有多人項目時，最後多一欄 J「人數」，金額 =G*H/J。
         /// </summary>
         private static void WriteSubstituteDetails(IXLWorksheet ws, MonthRecord record)
         {
-            string[] headers = ["代班個案", "原居服員", "日期", "星期", "代碼", "服務項目", "單價", "次數", "金額"];
+            bool shared = HasSharedItems(record);
+            string[] headers = ["代班個案", "原居服員", "日期", "星期", "代碼", "服務項目", "單價", "次數", "金額", .. shared ? new[] { PeopleHeader } : []];
             for (int c = 0; c < headers.Length; c++) ws.Cell(1, c + 1).Value = headers[c];
             var head = ws.Range(1, 1, 1, headers.Length);
             head.Style.Font.Bold = true;
@@ -230,7 +249,8 @@ namespace ServiceRecord.Services
                     ws.Cell(row, 6).Value = e.Item.Name;
                     ws.Cell(row, 7).Value = e.Item.Price;
                     ws.Cell(row, 8).Value = e.Count;
-                    ws.Cell(row, 9).FormulaA1 = $"G{row}*H{row}";
+                    ws.Cell(row, 9).FormulaA1 = $"G{row}*H{row}" + (shared ? $"/J{row}" : "");
+                    if (shared) ws.Cell(row, 10).Value = e.Item.People;
                     row++;
                 }
 
@@ -256,7 +276,7 @@ namespace ServiceRecord.Services
             ws.Range(2, 9, row, 9).Style.NumberFormat.Format = "#,##0.##";
             ws.Range(1, 1, row, headers.Length).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             ws.Range(1, 1, 1, headers.Length).Style.Border.BottomBorder = XLBorderStyleValues.Thin;
-            double[] widths = [18, 12, 8, 9, 8, 24, 8, 7, 11];
+            double[] widths = [18, 12, 8, 9, 8, 24, 8, 7, 11, 7];
             for (int c = 0; c < widths.Length; c++) ws.Column(c + 1).Width = widths[c];
             ws.SheetView.FreezeRows(1);
             ws.PageSetup.FitToPages(1, 0);
@@ -289,17 +309,23 @@ namespace ServiceRecord.Services
             ws.Cell(1, 1).Value = "服務項目代號";
             ws.Cell(1, 2).Value = "內容說明";
             ws.Cell(1, 3).Value = "支付金額";
+            bool shared = HasSharedItems(record);
+            if (shared) ws.Cell(1, 4).Value = PeopleHeader;
             ws.Row(1).Style.Font.Bold = true;
             for (int i = 0; i < record.Items.Count; i++)
             {
                 ws.Cell(i + 2, 1).Value = record.Items[i].Code;
                 ws.Cell(i + 2, 2).Value = record.Items[i].Name;
                 ws.Cell(i + 2, 3).Value = record.Items[i].Price;
+                if (shared) ws.Cell(i + 2, 4).Value = record.Items[i].People;
             }
             ws.Column(1).Width = 14;
             ws.Column(2).Width = 24;
             ws.Column(3).Width = 10;
         }
+
+        /// <summary>這個月有沒有多人一起做的項目（有才需要「人數」欄）。</summary>
+        private static bool HasSharedItems(MonthRecord record) => record.Items.Any(i => i.People > 1);
 
         /// <summary>欄號轉成 Excel 欄名：1 → A、36 → AJ。</summary>
         public static string Col(int column) => XLHelper.GetColumnLetterFromNumber(column);

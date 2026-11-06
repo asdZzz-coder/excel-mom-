@@ -1,13 +1,19 @@
 namespace ServiceRecord.Models
 {
-    /// <summary>一個服務項目：代碼（例如 BA13）、名稱、單價。</summary>
+    /// <summary>一個服務項目：代碼（例如 BA13）、名稱、單價、人數。</summary>
     public class ServiceItem
     {
         public string Code { get; set; } = "";
         public string Name { get; set; } = "";
         public int Price { get; set; }
 
-        public ServiceItem Clone() => new() { Code = Code, Name = Name, Price = Price };
+        /// <summary>這一項幾個人一起做，金額要平分。舊資料沒有這個欄位時是 1。</summary>
+        public int People { get; set; } = 1;
+
+        /// <summary>這一項做了 count 次的金額：次數 × 單價 ÷ 人數（不四捨五入，加總、乘比例後才顯示）。</summary>
+        public decimal AmountFor(int count) => count * Price / (decimal)Math.Max(People, 1);
+
+        public ServiceItem Clone() => new() { Code = Code, Name = Name, Price = Price, People = People };
 
         public override string ToString() => $"{Code} {Name}";
 

@@ -332,7 +332,7 @@
                                   Checked="UsedOnly_Changed" Unchecked="UsedOnly_Changed"/>
                     </Grid>
 
-                    <DataGrid x:Name="ItemsGrid" Grid.Row="1" FrozenColumnCount="3"
+                    <DataGrid x:Name="ItemsGrid" Grid.Row="1" FrozenColumnCount="4"
                               CellStyle="{StaticResource CrossCell}" ColumnHeaderStyle="{StaticResource CrossHeader}"
                               CurrentCellChanged="ItemsGrid_CurrentCellChanged" InputMethod.IsInputMethodEnabled="False"
                               PreviewKeyDown="ItemsGrid_PreviewKeyDown" PreviewTextInput="ItemsGrid_PreviewTextInput"
@@ -362,6 +362,7 @@
                                     <DataGridTextColumn Header="代碼" Binding="{Binding Code}" Width="74" ElementStyle="{StaticResource LeftText}"/>
                                     <DataGridTextColumn Header="服務項目（工作內容）" Binding="{Binding Name}" Width="*" MinWidth="180" ElementStyle="{StaticResource LeftText}"/>
                                     <DataGridTextColumn Header="單價" Binding="{Binding Price}" Width="80" ElementStyle="{StaticResource RightText}"/>
+                                    <DataGridTextColumn Header="人數" Binding="{Binding People}" Width="64" ElementStyle="{StaticResource CenterText}"/>
                                     <DataGridTextColumn Header="次數" Binding="{Binding Count}" Width="64" ElementStyle="{StaticResource CountText}"/>
                                     <DataGridTextColumn Header="金額" Binding="{Binding AmountText}" Width="100" ElementStyle="{StaticResource RightText}"/>
                                 </DataGrid.Columns>

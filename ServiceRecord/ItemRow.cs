@@ -27,6 +27,7 @@ namespace ServiceRecord
         public string Code => Service.Code;
         public string Name => Service.Name;
         public int Price => Service.Price;
+        public int People => Service.People;
 
         public string this[int index]
         {
@@ -90,7 +91,7 @@ namespace ServiceRecord
 
         public int Count => _record.CountOf(_clientId, Service.Code);
         public string CountText => Count == 0 ? "" : Count.ToString();
-        public string AmountText => Count == 0 ? "" : (Count * Price).ToString("#,##0");
+        public string AmountText => Count == 0 ? "" : Services.PayCalculator.Money(Service.AmountFor(Count));
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void Raise(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
@@ -127,7 +128,7 @@ namespace ServiceRecord
         public event PropertyChangedEventHandler? PropertyChanged;
     }
 
-    /// <summary>代班明細表的一列：日期、服務項目、單價、次數、金額（唯讀）。</summary>
+    /// <summary>代班明細表的一列：日期、服務項目、單價、人數、次數、金額（唯讀）。</summary>
     public sealed class DetailRow
     {
         private static readonly string[] WeekdayNames = ["日", "一", "二", "三", "四", "五", "六"];
@@ -139,8 +140,9 @@ namespace ServiceRecord
             Code = entry.Item.Code;
             Name = entry.Item.Name;
             Price = entry.Item.Price;
+            People = entry.Item.People;
             Count = entry.Count;
-            AmountText = entry.Amount.ToString("#,##0");
+            AmountText = Services.PayCalculator.Money(entry.Amount);
         }
 
         public string DateText { get; }
@@ -149,6 +151,7 @@ namespace ServiceRecord
         public string Code { get; }
         public string Name { get; }
         public int Price { get; }
+        public int People { get; }
         public int Count { get; }
         public string AmountText { get; }
     }

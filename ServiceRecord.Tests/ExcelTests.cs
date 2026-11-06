@@ -401,7 +401,7 @@ namespace ServiceRecord.Tests
             var entries = PayCalculator.Entries(record, record.Substitutes[0].Id);
 
             Assert.Equal(
-                [(new DateOnly(2026, 6, 3), "BA13", 195, 2, 390), (new DateOnly(2026, 6, 4), "BA01", 260, 1, 260)],
+                [(new DateOnly(2026, 6, 3), "BA13", 195, 2, 390m), (new DateOnly(2026, 6, 4), "BA01", 260, 1, 260m)],
                 entries.Select(e => (e.Date, e.Item.Code, e.Item.Price, e.Count, e.Amount)));
             Assert.Equal(PayCalculator.Subtotal(record, record.Substitutes[0].Id), entries.Sum(e => e.Amount));
             Assert.Empty(PayCalculator.Entries(record, "沒有這個人"));
@@ -488,6 +488,125 @@ namespace ServiceRecord.Tests
             Assert.Equal(record.Substitutes.Single().Id, loaded.Substitutes.Single().Id);
             Assert.Equal("王小明", loaded.Substitutes.Single().CoverFor);
             Assert.Equal(PayCalculator.SubstitutePay(record), PayCalculator.SubstitutePay(loaded));
+        }
+
+        // ---------- 人數 ----------
+
+        /// <summary>甲：BA13（195）2 人做 3 次 = 292.5；BA01（260）1 人做 1 次 = 260。小計 552.5，實領 331.5。</summary>
+        private static MonthRecord SampleWithTwoPeople()
+        {
+            var record = MonthRecord.CreateFrom(new AppSettings { Clients = [new Client { Name = "甲" }] }, 2026, 6);
+            record.Items.Single(i => i.Code == "BA13").People = 2;
+            record.GetDays(record.Clients[0].Id, "BA13")[0] = 3;
+            record.GetDays(record.Clients[0].Id, "BA01")[1] = 1;
+            return record;
+        }
+
+        [Fact]
+        public void People_DividesItemBeforeSummingThenAppliesRatio()
+        {
+            var record = SampleWithTwoPeople();
+            var id = record.Clients[0].Id;
+
+            Assert.Equal(292.5m, PayCalculator.Amount(record, id, record.Items.Single(i => i.Code == "BA13")));
+            Assert.Equal(260m, PayCalculator.Amount(record, id, record.Items.Single(i => i.Code == "BA01")));
+            Assert.Equal(552.5m, PayCalculator.Subtotal(record, id));
+            Assert.Equal(331.5m, PayCalculator.NetPay(record, id));
+        }
+
+        [Fact]
+        public void People_ThreePeople_DividesByThree()
+        {
+            var record = MonthRecord.CreateFrom(new AppSettings { Clients = [new Client { Name = "甲" }] }, 2026, 6);
+            record.Items.Single(i => i.Code == "BA08").People = 3; // 500 ÷ 3
+            record.GetDays(record.Clients[0].Id, "BA08")[0] = 1;
+
+            Assert.Equal(100m, Math.Round(PayCalculator.NetPay(record, record.Clients[0].Id), 2));
+            Assert.Equal("100", PayCalculator.Money(PayCalculator.NetPay(record, record.Clients[0].Id)));
+        }
+
+        [Fact]
+        public void People_InExport_FormulasMatchAndRoundTrip()
+        {
+            var record = SampleWithTwoPeople();
+            var path = ExportToTemp(record);
+            int row = ExcelExporter.FirstItemRow + record.Items.FindIndex(i => i.Code == "BA13");
+
+            using (var wb = new XLWorkbook(path))
+            {
+                var ws = wb.Worksheet("(甲)");
+                Assert.Equal("人數", ws.Cell(4, ExcelExporter.PeopleCol).GetString());
+                Assert.Equal(2.0, ws.Cell(row, ExcelExporter.PeopleCol).Value.GetNumber());
+                Assert.Equal(292.5, ws.Cell(row, ExcelExporter.AmountCol).Value.GetNumber());
+                Assert.Equal(331.5, ws.Cell("C3").Value.GetNumber(), 6);
+                Assert.Equal(331.5, ws.Cell("C1").Value.GetNumber(), 6);
+            }
+
+            var back = ExcelImporter.ToMonthRecord(ExcelImporter.Read(path), new AppSettings()).Record;
+            Assert.Equal(record.Items.Select(i => (i.Code, i.People)), back.Items.Select(i => (i.Code, i.People)));
+            Assert.Equal(PayCalculator.MonthlyPay(record), PayCalculator.MonthlyPay(back));
+        }
+
+        [Fact]
+        public void People_AllOne_KeepsOriginalExcelFormat()
+        {
+            var record = Sample();
+            using var wb = new XLWorkbook(ExportToTemp(record));
+            var ws = wb.Worksheet("(甲)");
+
+            Assert.True(ws.Cell(4, ExcelExporter.PeopleCol).IsEmpty());
+            Assert.Equal("AI5*C5", ws.Cell(5, ExcelExporter.AmountCol).FormulaA1);
+            Assert.All(record.Items, i => Assert.Equal(1, i.People));
+        }
+
+        [Fact]
+        public void People_InSubstituteDetails_AmountIsDivided()
+        {
+            var record = SampleWithSubstitute();
+            record.Items.Single(i => i.Code == "BA13").People = 2; // 明細第一筆：BA13 195 × 2 次 ÷ 2
+
+            var entries = PayCalculator.Entries(record, record.Substitutes[0].Id);
+            Assert.Equal(195m, entries[0].Amount);
+            Assert.Equal(PayCalculator.Subtotal(record, record.Substitutes[0].Id), entries.Sum(e => e.Amount));
+
+            using var wb = new XLWorkbook(ExportToTemp(record));
+            var ws = wb.Worksheet("代班明細");
+            Assert.Equal("人數", ws.Cell("J1").GetString());
+            Assert.Equal(2.0, ws.Cell("J2").Value.GetNumber());
+            Assert.Equal(195.0, ws.Cell("I2").Value.GetNumber());
+            Assert.Equal((double)PayCalculator.NetPay(record, record.Substitutes[0].Id), ws.Cell("I5").Value.GetNumber(), 6);
+        }
+
+        [Fact]
+        public void People_ChangingSettings_AsksThenAppliesToMonth()
+        {
+            var settings = new AppSettings { Clients = [new Client { Name = "甲" }] };
+            var june = MonthRecord.CreateFrom(settings, 2026, 6);
+            june.GetDays(june.Clients[0].Id, "BA13")[0] = 2;
+            Assert.True(june.MatchesSettings(settings));
+
+            settings.ServiceItems.Single(i => i.Code == "BA13").People = 2;
+
+            Assert.False(june.MatchesSettings(settings));              // 會問要不要套用
+            Assert.Equal(390m, PayCalculator.Subtotal(june, june.Clients[0].Id)); // 還沒套用：舊月份不變
+
+            june.ApplySettings(settings, removeWithCounts: false);
+            Assert.Equal(195m, PayCalculator.Subtotal(june, june.Clients[0].Id));
+            Assert.True(june.MatchesSettings(settings));
+        }
+
+        [Fact]
+        public void DataStore_OldMonthWithoutPeople_CountsAsOnePerson()
+        {
+            DataStore.DataDirectory = Path.Combine(_root, "data");
+            Directory.CreateDirectory(DataStore.MonthsDirectory);
+            File.WriteAllText(Path.Combine(DataStore.MonthsDirectory, "2026-05.json"),
+                """{ "Year": 2026, "Month": 5, "ShareRatio": 0.6, "Clients": [ { "Id": "a", "Name": "甲", "Location": "" } ], "Items": [ { "Code": "BA13", "Name": "陪同外出", "Price": 195 } ], "Counts": { "a": { "BA13": [ 2 ] } } }""");
+
+            var may = DataStore.LoadMonth(2026, 5)!;
+
+            Assert.Equal(1, may.Items.Single().People);
+            Assert.Equal(390m, PayCalculator.Subtotal(may, "a"));
         }
 
         // ---------- 存檔 ----------

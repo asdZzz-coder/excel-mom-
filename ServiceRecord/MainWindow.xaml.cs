@@ -364,6 +364,7 @@ namespace ServiceRecord
             ItemsGrid.Columns.Add(ReadOnlyColumn("代碼", nameof(ItemRow.Code), 74, "LeftText"));
             ItemsGrid.Columns.Add(ReadOnlyColumn("服務項目", nameof(ItemRow.Name), 196, "LeftText"));
             ItemsGrid.Columns.Add(ReadOnlyColumn("單價", nameof(ItemRow.Price), 62, "RightText"));
+            ItemsGrid.Columns.Add(ReadOnlyColumn("人數", nameof(ItemRow.People), 62, "CenterText"));
 
             var offDayCell = (Style)FindResource("WeekendCell");
             var dayCell = (Style)FindResource("CrossCell");
@@ -522,7 +523,7 @@ namespace ServiceRecord
             RatioText.Text = $"× {ratio}";
 
             var client = SelectedClient;
-            SubtotalText.Text = client == null ? "0" : PayCalculator.Subtotal(_record, client.Id).ToString("#,##0");
+            SubtotalText.Text = client == null ? "0" : PayCalculator.Money(PayCalculator.Subtotal(_record, client.Id));
             NetPayText.Text = client == null ? "0" : PayCalculator.Money(PayCalculator.NetPay(_record, client.Id));
             UpdateDetails(client);
         }
@@ -543,7 +544,7 @@ namespace ServiceRecord
             DetailEmptyText.Visibility = entries.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
             int days = entries.Select(e => e.Date).Distinct().Count();
             DetailSummaryText.Text = entries.Count == 0 ? "" :
-                $"共 {days} 天、{entries.Sum(e => e.Count)} 次　金額 {entries.Sum(e => e.Amount):#,##0}　實領 {PayCalculator.Money(PayCalculator.NetPay(_record, client.Id))}";
+                $"共 {days} 天、{entries.Sum(e => e.Count)} 次　金額 {PayCalculator.Money(entries.Sum(e => e.Amount))}　實領 {PayCalculator.Money(PayCalculator.NetPay(_record, client.Id))}";
             DetailPanel.Visibility = Visibility.Visible;
         }
 
@@ -688,7 +689,7 @@ namespace ServiceRecord
 
             var apply = MessageBox.Show(
                 $"設定已儲存，之後的新月份都會用新的設定。\n\n{MonthLabel} 已經有紀錄，要讓這個月也改用新的設定嗎？\n" +
-                "（新增或刪除的個案、服務項目，以及修改過的名稱、單價、比例）\n\n選「否」：這個月維持原樣。",
+                "（新增或刪除的個案、服務項目，以及修改過的名稱、單價、人數、比例）\n\n選「否」：這個月維持原樣。",
                 "套用設定", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (apply != MessageBoxResult.Yes) return;
 

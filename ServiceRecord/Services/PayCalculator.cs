@@ -3,17 +3,17 @@ using ServiceRecord.Models;
 namespace ServiceRecord.Services
 {
     /// <summary>
-    /// 跟原本 Excel 一樣的算法：
-    ///   每項金額 = 次數 × 單價（AJ = AI*C）
+    /// 跟原本 Excel 一樣的算法，多了人數（1 人時完全相同）：
+    ///   每項金額 = 次數 × 單價 ÷ 人數（AJ = AI*C/人數）
     ///   實領     = 金額小計 × 比例（SUM(AJ)*0.6）
     ///   月薪     = 所有個案的實領加總 = 正常個案合計 + 代班合計
     /// </summary>
     public static class PayCalculator
     {
-        public static int Amount(MonthRecord record, string clientId, ServiceItem item) =>
-            record.CountOf(clientId, item.Code) * item.Price;
+        public static decimal Amount(MonthRecord record, string clientId, ServiceItem item) =>
+            item.AmountFor(record.CountOf(clientId, item.Code));
 
-        public static int Subtotal(MonthRecord record, string clientId) =>
+        public static decimal Subtotal(MonthRecord record, string clientId) =>
             record.Items.Sum(i => Amount(record, clientId, i));
 
         public static decimal NetPay(MonthRecord record, string clientId) =>
@@ -30,10 +30,10 @@ namespace ServiceRecord.Services
         public static decimal MonthlyPay(MonthRecord record) =>
             RegularPay(record) + SubstitutePay(record);
 
-        /// <summary>明細的一筆：哪一天、做了哪一項、幾次、金額（次數 × 單價）。</summary>
+        /// <summary>明細的一筆：哪一天、做了哪一項、幾次、金額（次數 × 單價 ÷ 人數）。</summary>
         public sealed record Entry(DateOnly Date, ServiceItem Item, int Count)
         {
-            public int Amount => Count * Item.Price;
+            public decimal Amount => Item.AmountFor(Count);
         }
 
         /// <summary>某個案這個月每一天做了什麼（只列有次數的），依日期、再依項目順序排。代班明細用。</summary>
